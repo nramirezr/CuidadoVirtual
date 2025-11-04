@@ -3,7 +3,7 @@
     <div class="box-container">
       <div class="button-container">
         <h1><strong>Salud</strong></h1>
-        <button *ngFor="let categoria of todasLasCategorias.slice(0, 4)"
+        <button *ngFor="let categoria of todasLasCategorias.slice(0, 8)"
           [class.activo]="esCategoriaPrincipalActiva(categoria.nombre)"
           (click)="onClickCategoriaPrincipal(categoria.nombre)" class="categoria-button" #botonCategorias>
           {{categoria.icono}} {{ categoria.nombre }}
@@ -13,7 +13,7 @@
     <div class="box-container">
       <div class="button-container">
         <h1><strong>Otros</strong></h1>
-        <button *ngFor="let categoria of todasLasCategorias.slice(4, 6)"
+        <button *ngFor="let categoria of todasLasCategorias.slice(8, 11)"
           [class.activo]="esCategoriaPrincipalActiva(categoria.nombre)"
           (click)="onClickCategoriaPrincipal(categoria.nombre)" class="categoria-button" #botonCategorias>
           {{categoria.icono}} {{ categoria.nombre }}

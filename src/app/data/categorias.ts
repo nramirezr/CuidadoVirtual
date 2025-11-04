@@ -17,6 +17,26 @@ export const categorias: categoriasMod[] = [
     icono: '🩸'
   }, //end anticoagulantes
   {
+    nombre: 'Traqueotomia',
+    subCategorias: ['TR01', 'TR02', 'TR03'],
+    icono: '🫁  '
+  },
+  {
+    nombre: 'Cateter Urinario Permanente',
+    subCategorias: ['CU01', 'CU02', 'CU03', 'CU04'],
+    icono: '🚽  '
+  },
+  {
+    nombre: 'Catéter Subcutáneo',
+    subCategorias: ['CA01', 'CA02', 'CA03', 'CA04', 'CA05'],
+    icono: '💉 '
+  },
+  {
+    nombre: 'Gastrostomía',
+    subCategorias: ['GA01', 'GA02', 'GA03', 'GA04'],
+    icono: '🍼 '
+  },
+  {
     nombre: 'Analgésia y dolor',
     subCategorias: ['AN01', 'AN02', 'AN03'],
     icono: '💊 '
@@ -31,5 +51,9 @@ export const categorias: categoriasMod[] = [
     subCategorias: ['SC01', 'SC02', 'SC03', 'SC04', 'SC05', 'SC06', 'SC07', 'SC08', 'SC09'],
     icono: '🤝  '
   },
-
+  {
+    nombre: 'Cuidados para el Cuidador',
+    subCategorias: ['DO01'],
+    icono: '🫂 '
+  }
 ];

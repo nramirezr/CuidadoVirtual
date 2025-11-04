@@ -33,6 +33,23 @@ import { sg01Preguntas } from "./sg/sg01-preguntas";
 import { sg02Preguntas } from "./sg/sg02-preguntas";
 import { sg03Preguntas } from "./sg/sg03-preguntas";
 import { sg04Preguntas } from "./sg/sg04-preguntas";
+import { tr01Preguntas } from "./tr/tr01-preguntas";
+import { tr02Preguntas } from "./tr/tr02-preguntas";
+import { tr03Preguntas } from "./tr/tr03-preguntas";
+import { cu01Preguntas } from "./cu/cu01-preguntas";
+import { cu02Preguntas } from "./cu/cu02-preguntas";
+import { cu03Preguntas } from "./cu/cu03-preguntas";
+import { cu04Preguntas } from "./cu/cu04-preguntas";
+import { ca01Preguntas } from "./ca/ca01-preguntas";
+import { ca02Preguntas } from "./ca/ca02-preguntas";
+import { ca03Preguntas } from "./ca/ca03-preguntas";
+import { ca04Preguntas } from "./ca/ca04-preguntas";
+import { ca05Preguntas } from "./ca/ca05-preguntas";
+import { ga01Preguntas } from "./ga/ga01-preguntas";
+import { ga02Preguntas } from "./ga/ga02-preguntas";
+import { ga03Preguntas } from "./ga/ga03-preguntas";
+import { ga04Preguntas } from "./ga/ga04-preguntas";
+import { do01Preguntas } from "./do/do01-preguntas";
 
 export const preguntasRespuestas: pregRespMod[] = [
   ...ac01Preguntas,
@@ -69,4 +86,21 @@ export const preguntasRespuestas: pregRespMod[] = [
   ...sg02Preguntas,
   ...sg03Preguntas,
   ...sg04Preguntas,
+  ...tr01Preguntas,
+  ...tr02Preguntas,
+  ...tr03Preguntas,
+  ...cu01Preguntas,
+  ...cu02Preguntas,
+  ...cu03Preguntas,
+  ...cu04Preguntas,
+  ...ca01Preguntas,
+  ...ca02Preguntas,
+  ...ca03Preguntas,
+  ...ca04Preguntas,
+  ...ca05Preguntas,
+  ...ga01Preguntas,
+  ...ga02Preguntas,
+  ...ga03Preguntas,
+  ...ga04Preguntas,
+  ...do01Preguntas,
 ];

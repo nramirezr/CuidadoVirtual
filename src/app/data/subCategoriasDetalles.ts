@@ -37,6 +37,86 @@ export const subCategoriasDetalles: subCatMod[] = [
     codigo: 'AC07'
   },
   {
+    titulo: 'Conceptos',
+    descripcion: 'Conceptos',
+    codigo: 'TR01'
+  },
+  {
+    titulo: 'Cuidado Limpieza',
+    descripcion: 'Cuidado y Limpieza',
+    codigo: 'TR02'
+  },
+  {
+    titulo: 'Signos de Alarma',
+    descripcion: 'Signos de Alarma',
+    codigo: 'TR03'
+  },
+  {
+    titulo: 'Conceptos General',
+    descripcion: 'Conceptos generales de un catéter urinario permanente (CUP) o sonda foley.',
+    codigo: 'CU01'
+  },
+  {
+    titulo: 'Cuidados',
+    descripcion: 'Cuidados preventivos de un cateter urinario permanente',
+    codigo: 'CU02'
+  },
+  {
+    titulo: '¿Que hacer si...?',
+    descripcion: '¿Que hacer si...?',
+    codigo: 'CU03'
+  },
+  {
+    titulo: 'Signos de Alarma',
+    descripcion: 'Signos de alarma que requieren atención médica urgente relacionados con el catéter urinario.',
+    codigo: 'CU04'
+  },
+  {
+    titulo: 'Concepto General',
+    descripcion: 'Información general sobre qué es el catéter subcutáneo, su propósito y materiales.',
+    codigo: 'CA01'
+  },
+  {
+    titulo: 'Instalación y Retiro',
+    descripcion: 'Guía sobre dónde se puede instalar el catéter y qué profesional de la salud está autorizado para instalarlo y retirarlo.',
+    codigo: 'CA02'
+  },
+  {
+    titulo: 'Cuidado',
+    descripcion: 'Instrucciones sobre la limpieza, cuándo cambiar el apósito y qué actividades están prohibidas para mantener el catéter funcionando correctamente.',
+    codigo: 'CA03'
+  },
+  {
+    titulo: 'Actividades Cotidianas',
+    descripcion: 'Recomendaciones sobre el movimiento, caminar, dormir y otras actividades diarias con el catéter subcutáneo instalado.',
+    codigo: 'CA04'
+  },
+  {
+    titulo: 'Conceptos generales',
+    descripcion: '',
+    codigo: 'GA01'
+  },
+  {
+    titulo: 'Cuidado',
+    descripcion: 'Cuidado preventivo',
+    codigo: 'GA02'
+  },
+  {
+    titulo: 'Alimentación',
+    descripcion: 'Alimentación y medicamentos',
+    codigo: 'GA03'
+  },
+  {
+    titulo: '¿Que hacer si...?',
+    descripcion: '',
+    codigo: 'GA04'
+  },
+  {
+    titulo: 'Signos de Alarma',
+    descripcion: 'Signos de alarma que requieren atención médica urgente relacionados con el catéter subcutaneo.',
+    codigo: 'CA05'
+  },
+  {
     titulo: 'Generalidades',
     descripcion: 'Generalidades sobre la diabete',
     codigo: 'HG01'
@@ -170,6 +250,11 @@ export const subCategoriasDetalles: subCatMod[] = [
     titulo: 'Qué hacer si??',
     descripcion: '',
     codigo: 'SG04'
+  },
+  {
+    titulo: '',
+    descripcion: '',
+    codigo: 'DO01'
   }
 
 ];
