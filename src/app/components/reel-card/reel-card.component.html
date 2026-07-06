@@ -1,0 +1,33 @@
+<div class="media">
+  <div *ngIf="video.fuente === 'youtube'" class="youtube-wrapper">
+    <div [id]="youtubeContainerId"></div>
+  </div>
+  <video
+    *ngIf="video.fuente === 'mp4'"
+    #videoEl
+    class="mp4-video"
+    [src]="video.mp4Url"
+    [poster]="video.posterUrl"
+    loop
+    playsinline
+    [muted]="audioState.muted()"
+  ></video>
+</div>
+
+<div class="overlay-top">
+  <span class="category-chip">{{ video.categoria }}</span>
+</div>
+
+<div class="overlay-bottom">
+  <h3 class="video-title">{{ video.titulo }}</h3>
+  <p class="video-description">{{ video.descripcion }}</p>
+</div>
+
+<button
+  type="button"
+  class="mute-button"
+  (click)="onToggleMute()"
+  [attr.aria-label]="audioState.muted() ? 'Activar sonido' : 'Silenciar'"
+>
+  {{ audioState.muted() ? '🔇' : '🔊' }}
+</button>

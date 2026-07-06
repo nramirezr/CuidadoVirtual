@@ -1,5 +1,18 @@
 /* You can add global styles to this file, and also import other style files */
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
+:root {
+  --cv-color-primary: #0d47a1;
+  --cv-color-primary-light: #1565c0;
+  --cv-color-primary-lighter: #e3f2fd;
+  --cv-color-background: #f5f5f7;
+  --cv-color-surface: #ffffff;
+  --cv-color-text-primary: #212121;
+  --cv-color-text-secondary: #555555;
+  --cv-color-on-primary: #ffffff;
+  --cv-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --cv-radius-card: 12px;
+}
+
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

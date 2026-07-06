@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
-import { MenuDeroulantComponent } from './components/menu-deroulant/menu-deroulant.component';
 import { MatDialog } from '@angular/material/dialog';
 import { AgeConfirmationDialogComponent } from './dialogs/age-confirmation-dialog/age-confirmation-dialog.component';
 import { VisitCounterService } from './services/visit-counter.service';
@@ -11,7 +10,7 @@ import { VisitCounterService } from './services/visit-counter.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [MenuDeroulantComponent, MatCardModule],
+  imports: [RouterOutlet, MatCardModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })

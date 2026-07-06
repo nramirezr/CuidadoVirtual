@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
+import { routes } from './app.routes';
 import { VisitCounterService } from './services/visit-counter.service'; // Importa tu servicio
 import { of, throwError } from 'rxjs'; // Importa throwError para simular errores
 import { HttpClientTestingModule } from '@angular/common/http/testing'; // Necesario para el contexto de HttpClient
 import { CommonModule } from '@angular/common'; // Si tu componente usa ngIf, ngFor, etc.
 import { MatCardModule } from '@angular/material/card'; // Importa el módulo de Material Card
-import { NO_ERRORS_SCHEMA } from '@angular/core'; // Para ignorar componentes desconocidos como app-menu-deroulant
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -25,9 +26,9 @@ describe('AppComponent', () => {
         MatCardModule // Importa el módulo de Material Card para reconocer <mat-card> y sus sub-componentes
       ],
       providers: [
-        { provide: VisitCounterService, useValue: visitCounterServiceSpy }
-      ],
-      schemas: [NO_ERRORS_SCHEMA]
+        { provide: VisitCounterService, useValue: visitCounterServiceSpy },
+        provideRouter(routes)
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(AppComponent);
