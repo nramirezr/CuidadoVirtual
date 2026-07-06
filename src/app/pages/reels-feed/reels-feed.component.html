@@ -1,24 +1,45 @@
-<div class="chip-bar">
-  <mat-chip-listbox aria-label="Filtrar por categoría">
-    <mat-chip-option
-      [selected]="categoriaSeleccionada() === null"
-      (click)="seleccionarCategoria(null)"
-    >
-      Todos
-    </mat-chip-option>
-    <mat-chip-option
-      *ngFor="let c of categoriasConVideo()"
-      [selected]="categoriaSeleccionada() === c.nombre"
-      (click)="seleccionarCategoria(c.nombre)"
-    >
-      {{ c.icono }} {{ c.nombre }}
-    </mat-chip-option>
-  </mat-chip-listbox>
-</div>
+<div class="app-shell">
+  <header class="top-bar">
+    <span class="app-title">Cuidado Virtual</span>
+    <a routerLink="/bienvenida" class="info-link" aria-label="Información de la plataforma">ℹ️</a>
+  </header>
 
-<div class="reels-scroll-container" #scrollContainer>
-  <app-reel-card
-    *ngFor="let v of videosFiltrados(); trackBy: trackByVideoId"
-    [video]="v"
-  ></app-reel-card>
+  <div class="reels-scroll-container" #scrollContainer>
+    <app-reel-card
+      *ngFor="let v of videosFiltrados(); trackBy: trackByVideoId"
+      [video]="v"
+    ></app-reel-card>
+  </div>
+
+  <footer class="bottom-bar">
+    <mat-chip-listbox
+      *ngIf="filtrosAbiertos()"
+      class="chip-row"
+      aria-label="Filtrar por categoría"
+    >
+      <mat-chip-option
+        [selected]="categoriaSeleccionada() === null"
+        (click)="seleccionarCategoria(null)"
+      >
+        Todos
+      </mat-chip-option>
+      <mat-chip-option
+        *ngFor="let c of categoriasConVideo()"
+        [selected]="categoriaSeleccionada() === c.nombre"
+        (click)="seleccionarCategoria(c.nombre)"
+      >
+        {{ c.icono }} {{ c.nombre }}
+      </mat-chip-option>
+    </mat-chip-listbox>
+
+    <button
+      type="button"
+      class="filter-toggle"
+      (click)="toggleFiltros()"
+      [attr.aria-expanded]="filtrosAbiertos()"
+      aria-label="Filtrar por categoría"
+    >
+      🔍 {{ categoriaSeleccionada() ?? 'Todos' }}
+    </button>
+  </footer>
 </div>

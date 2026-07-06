@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ReelsFeedComponent } from './reels-feed.component';
 import { ReelCardComponent } from '../../components/reel-card/reel-card.component';
 import { videos } from '../../data/videos';
@@ -20,7 +21,8 @@ describe('ReelsFeedComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ReelsFeedComponent]
+      imports: [ReelsFeedComponent],
+      providers: [provideRouter([])]
     })
       .overrideComponent(ReelsFeedComponent, {
         remove: { imports: [ReelCardComponent] },
