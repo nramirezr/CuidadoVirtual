@@ -5,6 +5,10 @@
   </header>
 
   <mat-nav-list class="category-list">
+    <a mat-list-item routerLink="/videos" class="category-item todos-item">
+      <span class="category-icon" matListItemIcon>🎬</span>
+      <span matListItemTitle>Ver todos</span>
+    </a>
     @for (c of categorias; track c.nombre) {
       <a mat-list-item [routerLink]="['/videos', slugFor(c)]" class="category-item">
         <span class="category-icon" matListItemIcon>{{ c.icono }}</span>

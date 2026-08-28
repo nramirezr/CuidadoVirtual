@@ -31,6 +31,10 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
 
   private observer?: IntersectionObserver;
   private ytPlayer?: YT.Player;
+  /** Último estado de visibilidad conocido, para poder reproducir en cuanto el
+   * reproductor de YouTube quede listo aunque eso ocurra después de que el
+   * IntersectionObserver ya haya disparado su primer callback. */
+  private isVisible = false;
 
   constructor() {
     effect(() => {
@@ -55,7 +59,8 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
 
     this.observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+        this.isVisible = entry.isIntersecting && entry.intersectionRatio > 0.6;
+        if (this.isVisible) {
           this.play();
         } else {
           this.pause();
@@ -90,9 +95,21 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
         playlist: this.video.youtubeId
       },
       events: {
-        onReady: () => {
+        // Se usa `event.target` (el player que entrega la propia API) en vez de
+        // `this.ytPlayer`: `onReady` puede dispararse antes de que termine de
+        // ejecutarse `this.ytPlayer = new YT.Player(...)`, así que el campo de
+        // la instancia todavía podría no estar asignado en ese instante.
+        onReady: (event) => {
+          const player = event.target;
           if (!this.audioState.muted()) {
-            this.ytPlayer?.unMute();
+            player.unMute();
+          }
+          // La carga del iframe de YouTube es async y puede terminar después de
+          // que el IntersectionObserver ya haya intentado reproducir sin éxito
+          // (el player aún no existía). Si la tarjeta ya está visible al quedar
+          // listo el reproductor, se reproduce recién ahora.
+          if (this.isVisible) {
+            player.playVideo();
           }
         }
       }

@@ -12,6 +12,13 @@ export const routes: Routes = [
     title: 'Cuidado Virtual - Categorías'
   },
   {
+    // Sin categoría: modo "Ver todos", recorre el feed completo sin filtrar.
+    path: 'videos',
+    loadComponent: () =>
+      import('./pages/reels-feed/reels-feed.component').then((m) => m.ReelsFeedComponent),
+    title: 'Cuidado Virtual - Todos los videos'
+  },
+  {
     path: 'videos/:categoriaSlug',
     loadComponent: () =>
       import('./pages/reels-feed/reels-feed.component').then((m) => m.ReelsFeedComponent),

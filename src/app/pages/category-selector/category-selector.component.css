@@ -48,3 +48,13 @@
   font-weight: 500;
   color: var(--cv-color-text-primary, #212121);
 }
+
+.todos-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 4px;
+}
+
+::ng-deep .todos-item .mdc-list-item__primary-text {
+  font-weight: 700;
+  color: var(--cv-color-primary, #0d47a1) !important;
+}

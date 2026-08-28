@@ -110,4 +110,18 @@ describe('ReelCardComponent', () => {
     intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
     expect(player.pauseVideo).toHaveBeenCalled();
   });
+
+  it('should play as soon as the youtube player is ready, even if the card became visible first (race condition)', async () => {
+    // Reproduce el bug real: la tarjeta ya está visible en pantalla mientras el
+    // iframe de YouTube todavía está cargando de forma asíncrona (this.ytPlayer
+    // aún no existe cuando el IntersectionObserver dispara su callback).
+    createComponent(youtubeVideo);
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+
+    // Recién ahora se resuelve la carga async del reproductor (onReady se dispara).
+    await fixture.whenStable();
+
+    const player = FakeYTPlayer.instances[0];
+    expect(player.playVideo).toHaveBeenCalled();
+  });
 });

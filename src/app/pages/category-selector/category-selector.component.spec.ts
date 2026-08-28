@@ -23,7 +23,7 @@ describe('CategorySelectorComponent', () => {
   });
 
   it('should list every category that has at least one video', () => {
-    const items = fixture.nativeElement.querySelectorAll('.category-item');
+    const items = fixture.nativeElement.querySelectorAll('.category-item:not(.todos-item)');
     expect(items.length).toBe(component.categorias.length);
     expect(component.categorias.length).toBeGreaterThan(0);
     expect(component.categorias.length).toBeLessThanOrEqual(categorias.length);
@@ -32,7 +32,16 @@ describe('CategorySelectorComponent', () => {
   it('should link each category to its slugified /videos route', () => {
     const first = component.categorias[0];
     const expectedSlug = component.slugFor(first);
-    const link = fixture.nativeElement.querySelector('.category-item') as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector(
+      '.category-item:not(.todos-item)'
+    ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe(`/videos/${expectedSlug}`);
+  });
+
+  it('should offer a "Ver todos" entry linking to /videos, ahead of the categories', () => {
+    const todos = fixture.nativeElement.querySelector('.todos-item') as HTMLAnchorElement;
+    expect(todos).toBeTruthy();
+    expect(todos.getAttribute('href')).toBe('/videos');
+    expect(todos.textContent).toContain('Ver todos');
   });
 });

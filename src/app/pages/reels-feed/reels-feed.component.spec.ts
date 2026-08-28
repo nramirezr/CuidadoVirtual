@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ReelsFeedComponent } from './reels-feed.component';
 import { ReelCardComponent } from '../../components/reel-card/reel-card.component';
+import { videos } from '../../data/videos';
 import { videoMod } from '../../models/videoMod.model';
 import { slugify } from '../../utils/slug.util';
 
@@ -39,12 +40,16 @@ describe('ReelsFeedComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show an empty state when no category slug is set', () => {
+  it('should show every video ("Ver todos") when no category slug is set', () => {
     fixture.detectChanges();
 
+    expect(component.modoTodos()).toBeTrue();
     expect(component.categoriaActual()).toBeNull();
-    expect(component.videosFiltrados().length).toBe(0);
-    expect(fixture.nativeElement.querySelector('.empty-state')).toBeTruthy();
+    expect(component.videosFiltrados().length).toBe(videos.length);
+
+    const cards = fixture.nativeElement.querySelectorAll('app-reel-card');
+    expect(cards.length).toBe(videos.length);
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeFalsy();
   });
 
   it('should filter the feed to the category matching the slug input', () => {
@@ -59,11 +64,13 @@ describe('ReelsFeedComponent', () => {
     expect(cards.length).toBe(filtered.length);
   });
 
-  it('should show an empty state for an unknown slug', () => {
+  it('should show an empty state for an unknown slug (not the "Ver todos" state)', () => {
     fixture.componentRef.setInput('categoriaSlug', 'categoria-inexistente');
     fixture.detectChanges();
 
+    expect(component.modoTodos()).toBeFalse();
     expect(component.categoriaActual()).toBeNull();
+    expect(component.categoriaNoEncontrada()).toBeTrue();
     expect(fixture.nativeElement.querySelector('.empty-state')).toBeTruthy();
   });
 

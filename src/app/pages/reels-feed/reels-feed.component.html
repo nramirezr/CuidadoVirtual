@@ -1,14 +1,18 @@
 <div class="app-shell">
   <header class="top-bar">
     <a routerLink="/categorias" class="back-link cv-tap-target" aria-label="Volver a categorías">←</a>
-    @if (categoriaActual(); as categoria) {
-      <span class="breadcrumb">{{ categoria.icono }} {{ categoria.nombre }}</span>
+    @if (modoTodos()) {
+      <span class="breadcrumb">🎬 Todos los videos</span>
     } @else {
-      <span class="breadcrumb">Cuidado Virtual</span>
+      @if (categoriaActual(); as categoria) {
+        <span class="breadcrumb">{{ categoria.icono }} {{ categoria.nombre }}</span>
+      } @else {
+        <span class="breadcrumb">Cuidado Virtual</span>
+      }
     }
   </header>
 
-  @if (categoriaActual()) {
+  @if (modoTodos() || categoriaActual()) {
     <div class="reels-scroll-container">
       @for (v of videosFiltrados(); track v.id) {
         <app-reel-card [video]="v"></app-reel-card>
