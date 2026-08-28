@@ -1,0 +1,29 @@
+:host {
+  display: block;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sheet-form h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

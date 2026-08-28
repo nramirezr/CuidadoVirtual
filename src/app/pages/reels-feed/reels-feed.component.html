@@ -1,45 +1,23 @@
 <div class="app-shell">
   <header class="top-bar">
-    <span class="app-title">Cuidado Virtual</span>
-    <a routerLink="/bienvenida" class="info-link" aria-label="Información de la plataforma">ℹ️</a>
+    <a routerLink="/categorias" class="back-link cv-tap-target" aria-label="Volver a categorías">←</a>
+    @if (categoriaActual(); as categoria) {
+      <span class="breadcrumb">{{ categoria.icono }} {{ categoria.nombre }}</span>
+    } @else {
+      <span class="breadcrumb">Cuidado Virtual</span>
+    }
   </header>
 
-  <div class="reels-scroll-container" #scrollContainer>
-    <app-reel-card
-      *ngFor="let v of videosFiltrados(); trackBy: trackByVideoId"
-      [video]="v"
-    ></app-reel-card>
-  </div>
-
-  <footer class="bottom-bar">
-    <mat-chip-listbox
-      *ngIf="filtrosAbiertos()"
-      class="chip-row"
-      aria-label="Filtrar por categoría"
-    >
-      <mat-chip-option
-        [selected]="categoriaSeleccionada() === null"
-        (click)="seleccionarCategoria(null)"
-      >
-        Todos
-      </mat-chip-option>
-      <mat-chip-option
-        *ngFor="let c of categoriasConVideo()"
-        [selected]="categoriaSeleccionada() === c.nombre"
-        (click)="seleccionarCategoria(c.nombre)"
-      >
-        {{ c.icono }} {{ c.nombre }}
-      </mat-chip-option>
-    </mat-chip-listbox>
-
-    <button
-      type="button"
-      class="filter-toggle"
-      (click)="toggleFiltros()"
-      [attr.aria-expanded]="filtrosAbiertos()"
-      aria-label="Filtrar por categoría"
-    >
-      🔍 {{ categoriaSeleccionada() ?? 'Todos' }}
-    </button>
-  </footer>
+  @if (categoriaActual()) {
+    <div class="reels-scroll-container">
+      @for (v of videosFiltrados(); track v.id) {
+        <app-reel-card [video]="v"></app-reel-card>
+      }
+    </div>
+  } @else {
+    <div class="empty-state">
+      <p>No encontramos esta categoría.</p>
+      <a routerLink="/categorias" class="empty-state-link cv-tap-target">Volver a categorías</a>
+    </div>
+  }
 </div>

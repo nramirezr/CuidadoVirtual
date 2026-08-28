@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sheet-form h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.url-preview {
+  font-size: 0.85rem;
+  color: var(--cv-color-text-secondary, #555);
+  margin: 4px 0 12px;
+}
+
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

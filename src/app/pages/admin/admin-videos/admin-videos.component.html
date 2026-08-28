@@ -1,0 +1,36 @@
+<header class="admin-top-bar">
+  <a routerLink="/admin/categorias" class="back-link cv-tap-target" aria-label="Volver a categorías">←</a>
+  @if (categoria(); as cat) {
+    <h1>{{ cat.icono }} {{ cat.nombre }}</h1>
+  } @else {
+    <h1>Categoría no encontrada</h1>
+  }
+  <button
+    type="button"
+    class="add-button cv-tap-target"
+    (click)="agregar()"
+    [disabled]="!categoria()"
+    aria-label="Agregar video"
+  >
+    ＋
+  </button>
+</header>
+
+<div class="video-list">
+  @for (v of videos(); track v.id) {
+    <div class="video-row">
+      <div class="info">
+        <span class="titulo">{{ v.titulo }}</span>
+        <span class="meta">{{ v.fuente }}@if (v.esPlaceholder) { · placeholder }</span>
+      </div>
+      <button type="button" class="icon-button cv-tap-target" (click)="editar(v)" aria-label="Editar video">
+        ✏️
+      </button>
+      <button type="button" class="icon-button cv-tap-target" (click)="eliminar(v)" aria-label="Eliminar video">
+        🗑️
+      </button>
+    </div>
+  } @empty {
+    <p class="empty">Todavía no hay videos en esta categoría.</p>
+  }
+</div>

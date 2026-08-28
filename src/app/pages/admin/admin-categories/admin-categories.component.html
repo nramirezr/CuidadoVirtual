@@ -1,0 +1,41 @@
+<header class="admin-top-bar">
+  <a routerLink="/" class="back-link cv-tap-target" aria-label="Salir del admin">←</a>
+  <h1>Categorías</h1>
+  <button
+    type="button"
+    class="add-button cv-tap-target"
+    (click)="agregar()"
+    aria-label="Agregar categoría"
+  >
+    ＋
+  </button>
+</header>
+
+<div cdkDropList class="category-list" (cdkDropListDropped)="drop($event)">
+  @for (c of categorias(); track c.id) {
+    <div cdkDrag class="category-row">
+      <span class="drag-handle cv-tap-target" cdkDragHandle aria-label="Reordenar">⠿</span>
+      <span class="icon">{{ c.icono }}</span>
+      <a class="info" [routerLink]="['/admin/categorias', c.id, 'videos']">
+        <span class="nombre">{{ c.nombre }}</span>
+        <span class="conteo">{{ c.videoCount }} video(s)</span>
+      </a>
+      <button
+        type="button"
+        class="icon-button cv-tap-target"
+        (click)="editar(c.id, c.nombre, c.icono)"
+        aria-label="Editar categoría"
+      >
+        ✏️
+      </button>
+      <button
+        type="button"
+        class="icon-button cv-tap-target"
+        (click)="eliminar(c.id, c.nombre)"
+        aria-label="Eliminar categoría"
+      >
+        🗑️
+      </button>
+    </div>
+  }
+</div>

@@ -1,0 +1,15 @@
+<div class="category-screen">
+  <header class="top-bar">
+    <a routerLink="/" class="back-link cv-tap-target" aria-label="Volver al inicio">←</a>
+    <span class="screen-title">¿Qué te gustaría ver?</span>
+  </header>
+
+  <mat-nav-list class="category-list">
+    @for (c of categorias; track c.nombre) {
+      <a mat-list-item [routerLink]="['/videos', slugFor(c)]" class="category-item">
+        <span class="category-icon" matListItemIcon>{{ c.icono }}</span>
+        <span matListItemTitle>{{ c.nombre }}</span>
+      </a>
+    }
+  </mat-nav-list>
+</div>

@@ -1,10 +1,28 @@
 import { Routes } from '@angular/router';
-import { ReelsFeedComponent } from './pages/reels-feed/reels-feed.component';
 import { BienvenidaComponent } from './pages/bienvenida/bienvenida.component';
 
 export const routes: Routes = [
-  { path: 'inicio', component: ReelsFeedComponent, title: 'Cuidado Virtual - Videos' },
-  { path: 'bienvenida', component: BienvenidaComponent, title: 'Cuidado Virtual - Bienvenida' },
-  { path: '', redirectTo: 'inicio', pathMatch: 'full' },
-  { path: '**', redirectTo: 'inicio' }
+  { path: '', component: BienvenidaComponent, title: 'Cuidado Virtual - Bienvenida' },
+  {
+    path: 'categorias',
+    loadComponent: () =>
+      import('./pages/category-selector/category-selector.component').then(
+        (m) => m.CategorySelectorComponent
+      ),
+    title: 'Cuidado Virtual - Categorías'
+  },
+  {
+    path: 'videos/:categoriaSlug',
+    loadComponent: () =>
+      import('./pages/reels-feed/reels-feed.component').then((m) => m.ReelsFeedComponent),
+    title: 'Cuidado Virtual - Videos'
+  },
+  // Rutas antiguas: se redirigen por si algún QR/material impreso ya las referencia.
+  { path: 'bienvenida', redirectTo: '' },
+  { path: 'inicio', redirectTo: '' },
+  {
+    path: 'admin',
+    loadChildren: () => import('./pages/admin/admin.routes').then((m) => m.ADMIN_ROUTES)
+  },
+  { path: '**', redirectTo: '' }
 ];

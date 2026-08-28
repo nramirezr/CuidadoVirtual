@@ -1,0 +1,10 @@
+<h2 mat-dialog-title>{{ data.titulo }}</h2>
+<mat-dialog-content>{{ data.mensaje }}</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button class="cv-tap-target" (click)="onCancel()">
+    {{ data.textoCancelar ?? 'Cancelar' }}
+  </button>
+  <button mat-raised-button color="warn" class="cv-tap-target" (click)="onConfirm()" cdkFocusInitial>
+    {{ data.textoConfirmar ?? 'Eliminar' }}
+  </button>
+</mat-dialog-actions>

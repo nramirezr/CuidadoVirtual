@@ -3,8 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ReelsFeedComponent } from './reels-feed.component';
 import { ReelCardComponent } from '../../components/reel-card/reel-card.component';
-import { videos } from '../../data/videos';
 import { videoMod } from '../../models/videoMod.model';
+import { slugify } from '../../utils/slug.util';
 
 @Component({
   selector: 'app-reel-card',
@@ -32,37 +32,45 @@ describe('ReelsFeedComponent', () => {
 
     fixture = TestBed.createComponent(ReelsFeedComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
+    fixture.detectChanges();
     expect(component).toBeTruthy();
   });
 
-  it('should show every video by default ("Todos")', () => {
-    expect(component.categoriaSeleccionada()).toBeNull();
-    expect(component.videosFiltrados().length).toBe(videos.length);
+  it('should show an empty state when no category slug is set', () => {
+    fixture.detectChanges();
 
-    const cards = fixture.nativeElement.querySelectorAll('app-reel-card');
-    expect(cards.length).toBe(videos.length);
+    expect(component.categoriaActual()).toBeNull();
+    expect(component.videosFiltrados().length).toBe(0);
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeTruthy();
   });
 
-  it('should narrow the feed to a single category when a chip is selected', () => {
-    component.seleccionarCategoria('Anticoagulante');
+  it('should filter the feed to the category matching the slug input', () => {
+    fixture.componentRef.setInput('categoriaSlug', slugify('Anticoagulante'));
     fixture.detectChanges();
 
     const filtered = component.videosFiltrados();
     expect(filtered.length).toBeGreaterThan(0);
     expect(filtered.every((v) => v.categoria === 'Anticoagulante')).toBeTrue();
+
+    const cards = fixture.nativeElement.querySelectorAll('app-reel-card');
+    expect(cards.length).toBe(filtered.length);
   });
 
-  it('should restore the full list when "Todos" is selected again', () => {
-    component.seleccionarCategoria('Anticoagulante');
+  it('should show an empty state for an unknown slug', () => {
+    fixture.componentRef.setInput('categoriaSlug', 'categoria-inexistente');
     fixture.detectChanges();
 
-    component.seleccionarCategoria(null);
+    expect(component.categoriaActual()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeTruthy();
+  });
+
+  it('should have a back button linking to /categorias', () => {
     fixture.detectChanges();
 
-    expect(component.videosFiltrados().length).toBe(videos.length);
+    const backLink = fixture.nativeElement.querySelector('.back-link') as HTMLAnchorElement;
+    expect(backLink.getAttribute('href')).toBe('/categorias');
   });
 });

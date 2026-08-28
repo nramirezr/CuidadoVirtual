@@ -1,0 +1,20 @@
+<form [formGroup]="form" class="sheet-form" (ngSubmit)="guardar()">
+  <h2>{{ esEdicion ? 'Editar categoría' : 'Nueva categoría' }}</h2>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Nombre</mat-label>
+    <input matInput formControlName="nombre" required maxlength="60" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Ícono (emoji)</mat-label>
+    <input matInput formControlName="icono" required maxlength="8" />
+  </mat-form-field>
+
+  <p class="url-preview">URL resultante: <code>{{ urlPreview }}</code></p>
+
+  <div class="sheet-actions">
+    <button type="button" mat-button class="cv-tap-target" (click)="cancelar()">Cancelar</button>
+    <button type="submit" mat-raised-button color="primary" class="cv-tap-target">Guardar</button>
+  </div>
+</form>

@@ -17,3 +17,14 @@
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* Área táctil mínima recomendada (~48x48dp) para cualquier control interactivo,
+   sin importar el tamaño del glifo/ícono visible dentro de él. */
+.cv-tap-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  flex: 0 0 auto;
+}

@@ -1,0 +1,43 @@
+<form [formGroup]="form" class="sheet-form" (ngSubmit)="guardar()">
+  <h2>{{ esEdicion ? 'Editar video' : 'Nuevo video' }}</h2>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Título</mat-label>
+    <input matInput formControlName="titulo" required maxlength="120" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Descripción</mat-label>
+    <textarea matInput formControlName="descripcion" rows="2" maxlength="300"></textarea>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Fuente</mat-label>
+    <mat-select formControlName="fuente">
+      <mat-option value="youtube">YouTube</mat-option>
+      <mat-option value="mp4">Archivo MP4</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  @if (esYoutube) {
+    <mat-form-field appearance="outline">
+      <mat-label>ID de YouTube</mat-label>
+      <input matInput formControlName="youtubeId" />
+    </mat-form-field>
+  } @else {
+    <mat-form-field appearance="outline">
+      <mat-label>URL del MP4</mat-label>
+      <input matInput formControlName="mp4Url" />
+    </mat-form-field>
+  }
+
+  <mat-form-field appearance="outline">
+    <mat-label>URL de portada (opcional)</mat-label>
+    <input matInput formControlName="posterUrl" />
+  </mat-form-field>
+
+  <div class="sheet-actions">
+    <button type="button" mat-button class="cv-tap-target" (click)="cancelar()">Cancelar</button>
+    <button type="submit" mat-raised-button color="primary" class="cv-tap-target">Guardar</button>
+  </div>
+</form>
