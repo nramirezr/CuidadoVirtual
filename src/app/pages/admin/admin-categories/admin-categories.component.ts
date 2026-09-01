@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
-import { AdminMockDataService } from '../../../services/admin-mock-data.service';
+import { CategoriesService } from '../../../services/categories.service';
 import { ConfirmDialogComponent } from '../../../dialogs/confirm-dialog/confirm-dialog.component';
 import { CategoryFormSheetComponent } from '../category-form-sheet/category-form-sheet.component';
 
@@ -15,24 +16,26 @@ import { CategoryFormSheetComponent } from '../category-form-sheet/category-form
   styleUrl: './admin-categories.component.css'
 })
 export class AdminCategoriesComponent {
-  private readonly adminData = inject(AdminMockDataService);
+  private readonly categoriesService = inject(CategoriesService);
   private readonly dialog = inject(MatDialog);
   private readonly bottomSheet = inject(MatBottomSheet);
 
-  readonly categorias = this.adminData.categoriasConConteo;
+  readonly categorias = toSignal(this.categoriesService.categoriasConConteoLive(), {
+    initialValue: []
+  });
 
-  drop(event: CdkDragDrop<unknown>): void {
+  async drop(event: CdkDragDrop<unknown>): Promise<void> {
     const ids = this.categorias().map((c) => c.id);
     moveItemInArray(ids, event.previousIndex, event.currentIndex);
-    this.adminData.reordenarCategorias(ids);
+    await this.categoriesService.reordenarCategorias(ids);
   }
 
   agregar(): void {
     this.bottomSheet.open(CategoryFormSheetComponent);
   }
 
-  editar(id: string, nombre: string, icono: string): void {
-    this.bottomSheet.open(CategoryFormSheetComponent, { data: { id, nombre, icono } });
+  editar(id: string, nombre: string, icono: string, activa: boolean): void {
+    this.bottomSheet.open(CategoryFormSheetComponent, { data: { id, nombre, icono, activa } });
   }
 
   eliminar(id: string, nombre: string): void {
@@ -45,9 +48,9 @@ export class AdminCategoriesComponent {
         }
       })
       .afterClosed()
-      .subscribe((confirmado) => {
+      .subscribe(async (confirmado) => {
         if (confirmado) {
-          this.adminData.eliminarCategoria(id);
+          await this.categoriesService.eliminarCategoria(id);
         }
       });
   }

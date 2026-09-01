@@ -36,8 +36,20 @@
     <input matInput formControlName="posterUrl" />
   </mat-form-field>
 
+  <mat-slide-toggle formControlName="activo" class="visibilidad-toggle">
+    Visible en el sitio público
+  </mat-slide-toggle>
+
+  @if (errorMsg(); as msg) {
+    <p class="error-msg">{{ msg }}</p>
+  }
+
   <div class="sheet-actions">
-    <button type="button" mat-button class="cv-tap-target" (click)="cancelar()">Cancelar</button>
-    <button type="submit" mat-raised-button color="primary" class="cv-tap-target">Guardar</button>
+    <button type="button" mat-button class="cv-tap-target" (click)="cancelar()" [disabled]="guardando()">
+      Cancelar
+    </button>
+    <button type="submit" mat-raised-button color="primary" class="cv-tap-target" [disabled]="guardando()">
+      {{ guardando() ? 'Guardando…' : 'Guardar' }}
+    </button>
   </div>
 </form>

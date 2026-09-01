@@ -1,23 +1,38 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of } from 'rxjs';
 import { AdminCategoriesComponent } from './admin-categories.component';
-import { AdminMockDataService } from '../../../services/admin-mock-data.service';
+import { CategoriesService } from '../../../services/categories.service';
 
 describe('AdminCategoriesComponent', () => {
   let fixture: ComponentFixture<AdminCategoriesComponent>;
   let component: AdminCategoriesComponent;
-  let adminData: AdminMockDataService;
+  let categoriesServiceSpy: jasmine.SpyObj<CategoriesService>;
+
+  const categoriasFake = [
+    { id: '1', nombre: 'Anticoagulante', icono: '🩸', slug: 'anticoagulante', orden: 0, activa: true, videoCount: 2 },
+    { id: '2', nombre: 'Gastrostomía', icono: '🍼', slug: 'gastrostomia', orden: 1, activa: true, videoCount: 0 }
+  ];
 
   beforeEach(async () => {
+    categoriesServiceSpy = jasmine.createSpyObj('CategoriesService', [
+      'categoriasConConteoLive',
+      'reordenarCategorias',
+      'eliminarCategoria'
+    ]);
+    categoriesServiceSpy.categoriasConConteoLive.and.returnValue(of(categoriasFake));
+
     await TestBed.configureTestingModule({
       imports: [AdminCategoriesComponent, NoopAnimationsModule],
-      providers: [provideRouter([])]
+      providers: [
+        provideRouter([]),
+        { provide: CategoriesService, useValue: categoriesServiceSpy }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(AdminCategoriesComponent);
     component = fixture.componentInstance;
-    adminData = TestBed.inject(AdminMockDataService);
     fixture.detectChanges();
   });
 
@@ -25,17 +40,16 @@ describe('AdminCategoriesComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should list the seeded mock categories with video counts', () => {
+  it('should list the categories with their video counts', () => {
     const rows = fixture.nativeElement.querySelectorAll('.category-row');
-    expect(rows.length).toBe(adminData.categorias().length);
+    expect(rows.length).toBe(categoriasFake.length);
   });
 
-  it('should remove a category from the mock state on eliminarCategoria', () => {
-    const before = adminData.categorias().length;
-    const id = adminData.categorias()[0].id;
+  it('should reorder categories via reordenarCategorias when a drag ends', async () => {
+    categoriesServiceSpy.reordenarCategorias.and.returnValue(Promise.resolve());
 
-    adminData.eliminarCategoria(id);
+    await component.drop({ previousIndex: 0, currentIndex: 1 } as never);
 
-    expect(adminData.categorias().length).toBe(before - 1);
+    expect(categoriesServiceSpy.reordenarCategorias).toHaveBeenCalledWith(['2', '1']);
   });
 });

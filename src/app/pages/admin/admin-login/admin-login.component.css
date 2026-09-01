@@ -1,0 +1,52 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: var(--cv-color-background, #f5f5f7);
+}
+
+.login-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--cv-color-surface, #fff);
+  border-radius: var(--cv-radius-card, 12px);
+  box-shadow: var(--cv-shadow-card, 0 4px 12px rgba(0, 0, 0, 0.12));
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+h1 {
+  margin: 0 0 2px;
+  font-size: 1.2rem;
+  color: var(--cv-color-primary, #0d47a1);
+}
+
+.subtitle {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: var(--cv-color-text-secondary, #555);
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.error-msg {
+  color: #b3261e;
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.login-button {
+  margin-top: 8px;
+  width: 100%;
+}

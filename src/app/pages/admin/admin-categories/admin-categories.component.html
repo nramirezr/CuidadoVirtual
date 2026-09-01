@@ -13,17 +13,17 @@
 
 <div cdkDropList class="category-list" (cdkDropListDropped)="drop($event)">
   @for (c of categorias(); track c.id) {
-    <div cdkDrag class="category-row">
+    <div cdkDrag class="category-row" [class.inactiva]="!c.activa">
       <span class="drag-handle cv-tap-target" cdkDragHandle aria-label="Reordenar">⠿</span>
       <span class="icon">{{ c.icono }}</span>
       <a class="info" [routerLink]="['/admin/categorias', c.id, 'videos']">
-        <span class="nombre">{{ c.nombre }}</span>
+        <span class="nombre">{{ c.nombre }}@if (!c.activa) { <span class="badge">oculta</span> }</span>
         <span class="conteo">{{ c.videoCount }} video(s)</span>
       </a>
       <button
         type="button"
         class="icon-button cv-tap-target"
-        (click)="editar(c.id, c.nombre, c.icono)"
+        (click)="editar(c.id, c.nombre, c.icono, c.activa)"
         aria-label="Editar categoría"
       >
         ✏️

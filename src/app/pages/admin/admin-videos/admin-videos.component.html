@@ -18,9 +18,9 @@
 
 <div class="video-list">
   @for (v of videos(); track v.id) {
-    <div class="video-row">
+    <div class="video-row" [class.inactivo]="!v.activo">
       <div class="info">
-        <span class="titulo">{{ v.titulo }}</span>
+        <span class="titulo">{{ v.titulo }}@if (!v.activo) { <span class="badge">oculto</span> }</span>
         <span class="meta">{{ v.fuente }}@if (v.esPlaceholder) { · placeholder }</span>
       </div>
       <button type="button" class="icon-button cv-tap-target" (click)="editar(v)" aria-label="Editar video">

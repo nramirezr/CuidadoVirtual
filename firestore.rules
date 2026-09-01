@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /categorias/{categoriaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /videos/{videoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Lista blanca de administradores: solo lectura del propio uid, nunca
+    // escribible desde el cliente. El único bootstrap es manual, vía
+    // Firebase Console (ver checklist del plan).
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Solo se toca server-side vía firebase-admin (api/increment-visit.ts),
+    // que usa credenciales de service account y por lo tanto ignora estas
+    // reglas por completo. Ningún acceso directo desde el cliente.
+    match /metrics/{docId} {
+      allow read, write: if false;
+    }
+  }
+}

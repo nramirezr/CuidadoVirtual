@@ -4,16 +4,22 @@
     <span class="screen-title">¿Qué te gustaría ver?</span>
   </header>
 
-  <mat-nav-list class="category-list">
-    <a mat-list-item routerLink="/videos" class="category-item todos-item">
-      <span class="category-icon" matListItemIcon>🎬</span>
-      <span matListItemTitle>Ver todos</span>
-    </a>
-    @for (c of categorias; track c.nombre) {
-      <a mat-list-item [routerLink]="['/videos', slugFor(c)]" class="category-item">
-        <span class="category-icon" matListItemIcon>{{ c.icono }}</span>
-        <span matListItemTitle>{{ c.nombre }}</span>
+  @if (cargando()) {
+    <p class="status-msg">Cargando categorías…</p>
+  } @else if (error()) {
+    <p class="status-msg">No pudimos cargar las categorías. Intenta de nuevo más tarde.</p>
+  } @else {
+    <mat-nav-list class="category-list">
+      <a mat-list-item routerLink="/videos" class="category-item todos-item">
+        <span class="category-icon" matListItemIcon>🎬</span>
+        <span matListItemTitle>Ver todos</span>
       </a>
-    }
-  </mat-nav-list>
+      @for (c of categorias(); track c.id) {
+        <a mat-list-item [routerLink]="['/videos', slugFor(c)]" class="category-item">
+          <span class="category-icon" matListItemIcon>{{ c.icono }}</span>
+          <span matListItemTitle>{{ c.nombre }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  }
 </div>

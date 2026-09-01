@@ -1,11 +1,14 @@
 import { Component, computed, inject, input } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { of, switchMap } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
-import { AdminMockDataService } from '../../../services/admin-mock-data.service';
+import { CategoriesService } from '../../../services/categories.service';
+import { VideosService } from '../../../services/videos.service';
 import { ConfirmDialogComponent } from '../../../dialogs/confirm-dialog/confirm-dialog.component';
 import { VideoFormSheetComponent } from '../video-form-sheet/video-form-sheet.component';
-import { videoMod } from '../../../models/videoMod.model';
+import { VideoDoc } from '../../../models/video-doc.model';
 
 @Component({
   selector: 'app-admin-videos',
@@ -15,41 +18,50 @@ import { videoMod } from '../../../models/videoMod.model';
   styleUrl: './admin-videos.component.css'
 })
 export class AdminVideosComponent {
-  private readonly adminData = inject(AdminMockDataService);
+  private readonly categoriesService = inject(CategoriesService);
+  private readonly videosService = inject(VideosService);
   private readonly dialog = inject(MatDialog);
   private readonly bottomSheet = inject(MatBottomSheet);
 
   /** Bindeado automáticamente desde el segmento :categoriaId de la ruta. */
   readonly categoriaId = input<string>('');
 
+  private readonly categoriasTodas = toSignal(this.categoriesService.categoriasLive(), {
+    initialValue: []
+  });
+
   readonly categoria = computed(() =>
-    this.adminData.categorias().find((c) => c.id === this.categoriaId())
+    this.categoriasTodas().find((c) => c.id === this.categoriaId())
   );
 
-  readonly videos = computed(() => {
-    const cat = this.categoria();
-    return cat ? this.adminData.videosDeCategoria(cat.nombre) : [];
-  });
+  readonly videos = toSignal(
+    toObservable(this.categoriaId).pipe(
+      switchMap((id) => (id ? this.videosService.videosDeCategoriaLive(id) : of([])))
+    ),
+    { initialValue: [] as VideoDoc[] }
+  );
 
   agregar(): void {
     const cat = this.categoria();
     if (!cat) {
       return;
     }
-    this.bottomSheet.open(VideoFormSheetComponent, { data: { categoriaNombre: cat.nombre } });
+    this.bottomSheet.open(VideoFormSheetComponent, {
+      data: { categoriaId: cat.id, categoriaNombre: cat.nombre }
+    });
   }
 
-  editar(video: videoMod): void {
+  editar(video: VideoDoc): void {
     const cat = this.categoria();
     if (!cat) {
       return;
     }
     this.bottomSheet.open(VideoFormSheetComponent, {
-      data: { categoriaNombre: cat.nombre, video }
+      data: { categoriaId: cat.id, categoriaNombre: cat.nombre, video }
     });
   }
 
-  eliminar(video: videoMod): void {
+  eliminar(video: VideoDoc): void {
     this.dialog
       .open(ConfirmDialogComponent, {
         width: '340px',
@@ -59,9 +71,9 @@ export class AdminVideosComponent {
         }
       })
       .afterClosed()
-      .subscribe((confirmado) => {
+      .subscribe(async (confirmado) => {
         if (confirmado) {
-          this.adminData.eliminarVideo(video.id);
+          await this.videosService.eliminarVideo(video.id);
         }
       });
   }

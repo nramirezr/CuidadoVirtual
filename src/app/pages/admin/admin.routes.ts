@@ -1,10 +1,21 @@
 import { Routes } from '@angular/router';
 import { AdminShellComponent } from './admin-shell/admin-shell.component';
+import { adminGuard } from './admin.guard';
 
 export const ADMIN_ROUTES: Routes = [
   {
+    // Ruta hermana, fuera del guard: si estuviera adentro, un visitante sin
+    // sesión quedaría en loop (guard redirige a login -> login está guardado
+    // -> redirige a login...).
+    path: 'login',
+    loadComponent: () =>
+      import('./admin-login/admin-login.component').then((m) => m.AdminLoginComponent),
+    title: 'Admin - Ingresar'
+  },
+  {
     path: '',
     component: AdminShellComponent,
+    canActivate: [adminGuard],
     children: [
       { path: '', redirectTo: 'categorias', pathMatch: 'full' },
       {

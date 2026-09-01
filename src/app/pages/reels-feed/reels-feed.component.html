@@ -12,7 +12,11 @@
     }
   </header>
 
-  @if (modoTodos() || categoriaActual()) {
+  @if (cargando()) {
+    <div class="empty-state">
+      <p>Cargando…</p>
+    </div>
+  } @else if (modoTodos() || categoriaActual()) {
     <div class="reels-scroll-container">
       @for (v of videosFiltrados(); track v.id) {
         <app-reel-card [video]="v"></app-reel-card>

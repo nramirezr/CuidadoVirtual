@@ -1,11 +1,11 @@
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { Meta } from '@angular/platform-browser';
+import { AuthService } from '../../../services/auth.service';
 
 /**
- * Envoltorio de todas las pantallas /admin. No hay sesión/login real (ver
- * AdminMockDataService) así que en vez de un guard falso, se deja bien visible
- * que esto es un prototipo y se excluye de la indexación en la URL pública.
+ * Envoltorio de todas las pantallas /admin (ya protegidas por `adminGuard`,
+ * ver `admin.routes.ts`). Excluida de la indexación en la URL pública.
  */
 @Component({
   selector: 'app-admin-shell',
@@ -16,8 +16,17 @@ import { Meta } from '@angular/platform-browser';
 })
 export class AdminShellComponent {
   private readonly meta = inject(Meta);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  readonly currentUser = this.auth.currentUser;
 
   constructor() {
     this.meta.updateTag({ name: 'robots', content: 'noindex, nofollow' });
+  }
+
+  async salir(): Promise<void> {
+    await this.auth.logout();
+    this.router.navigateByUrl('/admin/login');
   }
 }

@@ -21,6 +21,17 @@ mat-form-field {
   width: 100%;
 }
 
+.visibilidad-toggle {
+  margin: 4px 0 8px;
+  font-size: 0.9rem;
+}
+
+.error-msg {
+  color: #b3261e;
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
 .sheet-actions {
   display: flex;
   justify-content: flex-end;

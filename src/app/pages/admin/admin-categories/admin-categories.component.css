@@ -79,6 +79,20 @@
   text-overflow: ellipsis;
 }
 
+.category-row.inactiva {
+  opacity: 0.55;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--cv-color-text-secondary, #555);
+  background: var(--cv-color-background, #f5f5f7);
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 4px;
+}
+
 .conteo {
   font-size: 0.8rem;
   color: var(--cv-color-text-secondary, #555);

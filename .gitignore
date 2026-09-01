@@ -45,3 +45,8 @@ Thumbs.db
 .claude/
 .vercel
 .env*
+
+# Nunca committear la clave privada de un service account de Firebase
+# (usada solo localmente por scripts/seed-firestore.js).
+*service-account*.json
+serviceAccountKey.json
