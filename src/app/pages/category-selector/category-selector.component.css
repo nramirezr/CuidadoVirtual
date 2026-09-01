@@ -31,11 +31,17 @@
 }
 
 .category-list {
-  padding: 8px 0 24px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .category-item {
   min-height: 64px !important;
+  background: var(--cv-color-surface, #fff) !important;
+  border-radius: var(--cv-radius-card, 12px) !important;
+  box-shadow: var(--cv-shadow-card, 0 4px 12px rgba(0, 0, 0, 0.12));
 }
 
 .category-icon {
@@ -56,8 +62,7 @@
 }
 
 .todos-item {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 ::ng-deep .todos-item .mdc-list-item__primary-text {
