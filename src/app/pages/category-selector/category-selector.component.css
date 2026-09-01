@@ -44,12 +44,21 @@
   box-shadow: var(--cv-shadow-card, 0 4px 12px rgba(0, 0, 0, 0.12));
 }
 
-.category-icon {
-  font-size: 1.6rem;
-  margin-right: 4px;
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-::ng-deep .category-item .mdc-list-item__primary-text {
+.category-icon {
+  font-size: 1.6rem;
+  flex: 0 0 auto;
+  /* Emoji tal cual, sin el tinte de "ícono" que aplica Material por defecto. */
+  opacity: 1;
+  filter: none;
+}
+
+.category-title {
   font-size: 1rem;
   font-weight: 500;
   color: var(--cv-color-text-primary, #212121);
@@ -65,7 +74,7 @@
   margin-bottom: 8px;
 }
 
-::ng-deep .todos-item .mdc-list-item__primary-text {
+.todos-item .category-title {
   font-weight: 700;
-  color: var(--cv-color-primary, #0d47a1) !important;
+  color: var(--cv-color-primary, #0d47a1);
 }

@@ -11,13 +11,17 @@
   } @else {
     <mat-nav-list class="category-list">
       <a mat-list-item routerLink="/videos" class="category-item todos-item">
-        <span class="category-icon" matListItemIcon>🎬</span>
-        <span matListItemTitle>Ver todos</span>
+        <span class="item-row">
+          <span class="category-icon">🎬</span>
+          <span class="category-title">Ver todos</span>
+        </span>
       </a>
       @for (c of categorias(); track c.id) {
         <a mat-list-item [routerLink]="['/videos', slugFor(c)]" class="category-item">
-          <span class="category-icon" matListItemIcon>{{ c.icono }}</span>
-          <span matListItemTitle>{{ c.nombre }}</span>
+          <span class="item-row">
+            <span class="category-icon">{{ c.icono }}</span>
+            <span class="category-title">{{ c.nombre }}</span>
+          </span>
         </a>
       }
     </mat-nav-list>
