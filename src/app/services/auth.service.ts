@@ -45,17 +45,27 @@ export class AuthService {
     });
   }
 
-  /** Se resuelve una vez que Firebase restauró (o descartó) la sesión persistida. */
+  /**
+   * Se resuelve una vez que Firebase restauró (o descartó) la sesión
+   * persistida al arrancar la app. Solo cubre ESE momento inicial (por eso el
+   * guard la usa) — no se re-resuelve en logins/logouts posteriores dentro de
+   * la misma sesión; para eso, `login()`/`logout()` ya dejan `isAdmin()`
+   * correcto por sí solos antes de devolver el control.
+   */
   waitUntilReady(): Promise<void> {
     return this.readyPromise;
   }
 
-  login(email: string, password: string) {
-    return signInWithEmailAndPassword(this.auth, email, password);
+  async login(email: string, password: string): Promise<void> {
+    const credential = await signInWithEmailAndPassword(this.auth, email, password);
+    this.currentUserSignal.set(credential.user);
+    this.isAdminSignal.set(await this.esAdmin(credential.user.uid));
   }
 
-  logout() {
-    return signOut(this.auth);
+  async logout(): Promise<void> {
+    await signOut(this.auth);
+    this.currentUserSignal.set(null);
+    this.isAdminSignal.set(false);
   }
 
   private async esAdmin(uid: string): Promise<boolean> {

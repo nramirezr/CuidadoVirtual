@@ -44,7 +44,6 @@ export class AdminLoginComponent {
 
     try {
       await this.auth.login(email, password);
-      await this.auth.waitUntilReady();
 
       if (!this.auth.isAdmin()) {
         await this.auth.logout();
