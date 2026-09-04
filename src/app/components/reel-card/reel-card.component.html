@@ -14,6 +14,16 @@
   ></video>
 </div>
 
+<button
+  *ngIf="mostrarBotonPlay()"
+  type="button"
+  class="play-fallback-button"
+  (click)="onTapPlay()"
+  aria-label="Reproducir video"
+>
+  ▶
+</button>
+
 <div class="overlay-top">
   <span class="category-chip">{{ video.categoria }}</span>
 </div>

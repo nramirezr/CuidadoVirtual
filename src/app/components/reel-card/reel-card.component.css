@@ -84,6 +84,27 @@
   opacity: 0.9;
 }
 
+.play-fallback-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 6px; /* centra visualmente el triángulo "▶" */
+}
+
 .mute-button {
   position: absolute;
   right: 16px;

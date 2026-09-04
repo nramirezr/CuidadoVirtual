@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ReelCardComponent } from './reel-card.component';
 import { YoutubeApiLoaderService } from '../../services/youtube-api-loader.service';
 import { videoMod } from '../../models/videoMod.model';
@@ -42,7 +42,10 @@ describe('ReelCardComponent', () => {
   };
 
   beforeEach(async () => {
-    (window as any).YT = { Player: FakeYTPlayer };
+    (window as any).YT = {
+      Player: FakeYTPlayer,
+      PlayerState: { UNSTARTED: -1, ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 }
+    };
     FakeYTPlayer.instances = [];
 
     observeSpy = jasmine.createSpy('observe');
@@ -124,4 +127,67 @@ describe('ReelCardComponent', () => {
     const player = FakeYTPlayer.instances[0];
     expect(player.playVideo).toHaveBeenCalled();
   });
+
+  it('should show a manual play fallback if the video stays visible but never actually starts playing', fakeAsync(() => {
+    // Simula lo que reportó un usuario real: el autoplay del iframe de YouTube
+    // no arranca (a diferencia de un <video> nativo, no está garantizado en
+    // todos los navegadores/redes). onStateChange nunca llega a PLAYING.
+    createComponent(youtubeVideo);
+    tick();
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+    fixture.detectChanges();
+
+    expect(component.mostrarBotonPlay()).toBeFalse();
+
+    tick(1200);
+    fixture.detectChanges();
+
+    expect(component.mostrarBotonPlay()).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.play-fallback-button')).toBeTruthy();
+  }));
+
+  it('should hide the fallback button once playback actually starts (onStateChange PLAYING)', fakeAsync(() => {
+    createComponent(youtubeVideo);
+    tick();
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+    fixture.detectChanges();
+
+    const player = FakeYTPlayer.instances[0];
+    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING });
+
+    tick(1200);
+    fixture.detectChanges();
+
+    expect(component.mostrarBotonPlay()).toBeFalse();
+  }));
+
+  it('should retry playback when the fallback button is tapped', fakeAsync(() => {
+    createComponent(youtubeVideo);
+    tick();
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+    fixture.detectChanges();
+    tick(1200);
+    fixture.detectChanges();
+
+    const player = FakeYTPlayer.instances[0];
+    player.playVideo.calls.reset();
+
+    const fallback: HTMLButtonElement = fixture.nativeElement.querySelector('.play-fallback-button');
+    fallback.click();
+
+    expect(player.playVideo).toHaveBeenCalled();
+  }));
+
+  it('should not show the fallback button after scrolling away before the grace period ends', fakeAsync(() => {
+    createComponent(youtubeVideo);
+    tick();
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+    fixture.detectChanges();
+
+    intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
+    tick(1200);
+    fixture.detectChanges();
+
+    expect(component.mostrarBotonPlay()).toBeFalse();
+  }));
 });
