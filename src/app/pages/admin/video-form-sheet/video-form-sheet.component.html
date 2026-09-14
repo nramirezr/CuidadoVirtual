@@ -21,9 +21,12 @@
 
   @if (esYoutube) {
     <mat-form-field appearance="outline">
-      <mat-label>ID de YouTube</mat-label>
-      <input matInput formControlName="youtubeId" />
+      <mat-label>ID o URL de YouTube</mat-label>
+      <input matInput formControlName="youtubeId" placeholder="Pega el link (incluye Shorts) o solo el ID" />
     </mat-form-field>
+    @if (form.controls.youtubeId.value) {
+      <p class="id-preview">ID detectado: <code>{{ youtubeIdPreview }}</code></p>
+    }
   } @else {
     <mat-form-field appearance="outline">
       <mat-label>URL del MP4</mat-label>

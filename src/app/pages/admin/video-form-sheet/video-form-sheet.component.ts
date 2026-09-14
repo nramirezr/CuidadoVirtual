@@ -9,6 +9,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { VideosService } from '../../../services/videos.service';
 import { FuenteVideo } from '../../../models/videoMod.model';
 import { VideoDoc } from '../../../models/video-doc.model';
+import { extractYoutubeId } from '../../../utils/youtube-id.util';
 
 export interface VideoFormSheetData {
   categoriaId: string;
@@ -44,7 +45,7 @@ export class VideoFormSheetComponent {
     titulo: [this.data.video?.titulo ?? '', [Validators.required, Validators.minLength(3)]],
     descripcion: [this.data.video?.descripcion ?? ''],
     fuente: [this.data.video?.fuente ?? ('youtube' as FuenteVideo), [Validators.required]],
-    youtubeId: [this.data.video?.youtubeId ?? ''],
+    youtubeId: [extractYoutubeId(this.data.video?.youtubeId ?? '')],
     mp4Url: [this.data.video?.mp4Url ?? ''],
     posterUrl: [this.data.video?.posterUrl ?? ''],
     activo: [this.data.video?.activo ?? true]
@@ -52,6 +53,13 @@ export class VideoFormSheetComponent {
 
   get esYoutube(): boolean {
     return this.form.controls.fuente.value === 'youtube';
+  }
+
+  /** Se muestra en vivo bajo el campo, para confirmar qué ID se va a guardar
+   * aunque el admin haya pegado la URL completa (de un video normal o de un
+   * Short). */
+  get youtubeIdPreview(): string {
+    return extractYoutubeId(this.form.controls.youtubeId.value);
   }
 
   async guardar(): Promise<void> {
@@ -68,7 +76,7 @@ export class VideoFormSheetComponent {
       titulo,
       descripcion,
       fuente,
-      youtubeId: fuente === 'youtube' ? youtubeId : undefined,
+      youtubeId: fuente === 'youtube' ? extractYoutubeId(youtubeId) : undefined,
       mp4Url: fuente === 'mp4' ? mp4Url : undefined,
       posterUrl: posterUrl || undefined,
       activo
