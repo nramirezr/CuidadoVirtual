@@ -7,6 +7,7 @@ class FakeYTPlayer {
   static instances: FakeYTPlayer[] = [];
   playVideo = jasmine.createSpy('playVideo');
   pauseVideo = jasmine.createSpy('pauseVideo');
+  seekTo = jasmine.createSpy('seekTo');
   mute = jasmine.createSpy('mute');
   unMute = jasmine.createSpy('unMute');
   destroy = jasmine.createSpy('destroy');
@@ -112,6 +113,19 @@ describe('ReelCardComponent', () => {
 
     intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
     expect(player.pauseVideo).toHaveBeenCalled();
+  });
+
+  it('should rewind to the start when leaving view, so scrolling back replays from 0', async () => {
+    // Reporte real: al volver a un video ya visto, retomaba donde había
+    // quedado en vez de empezar de nuevo, a diferencia de otros feeds de reels.
+    createComponent(youtubeVideo);
+    await fixture.whenStable();
+
+    const player = FakeYTPlayer.instances[0];
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+    intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
+
+    expect(player.seekTo).toHaveBeenCalledWith(0, true);
   });
 
   it('should play as soon as the youtube player is ready, even if the card became visible first (race condition)', async () => {

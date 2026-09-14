@@ -186,8 +186,16 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
   private pause(): void {
     if (this.video.fuente === 'youtube') {
       this.ytPlayer?.pauseVideo();
+      // Al salir de pantalla se reinicia al inicio (como en cualquier feed de
+      // reels): sin esto, `playVideo()` simplemente retoma donde quedó al
+      // volver a hacer scroll hacia este video.
+      this.ytPlayer?.seekTo(0, true);
     } else {
-      this.videoElRef?.nativeElement.pause();
+      const el = this.videoElRef?.nativeElement;
+      el?.pause();
+      if (el) {
+        el.currentTime = 0;
+      }
     }
   }
 }
