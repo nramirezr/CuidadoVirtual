@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, switchMap } from 'rxjs';
 import {
   Firestore,
-  addDoc,
   collection,
   doc,
   getCountFromServer,
@@ -20,6 +19,7 @@ import { FIREBASE_APP } from '../core/firebase-app.provider';
 import { collectionSnapshots$ } from '../core/firestore-rx.util';
 import { CategoriaDoc } from '../models/categoria-doc.model';
 import { slugify } from '../utils/slug.util';
+import { AuthService } from './auth.service';
 
 export interface CategoriaFormInput {
   nombre: string;
@@ -36,6 +36,7 @@ export interface CategoriaFormInput {
 @Injectable({ providedIn: 'root' })
 export class CategoriesService {
   private readonly app = inject(FIREBASE_APP);
+  private readonly auth = inject(AuthService);
   private readonly firestore: Firestore = getFirestore(this.app);
   private readonly coleccion = collection(this.firestore, 'categorias');
 
@@ -47,16 +48,23 @@ export class CategoriesService {
     return collectionSnapshots$<CategoriaDoc>(q);
   }
 
-  /** Una sola lectura, solo activas por defecto — para las rutas públicas. */
+  /**
+   * Una sola lectura, solo activas por defecto — para las rutas públicas.
+   * El filtro va en la propia consulta (`where`), no en memoria: con las
+   * reglas de seguridad de Firestore, si una consulta trajera un documento
+   * inactivo y quien pregunta no es admin, toda la consulta fallaría con
+   * permission-denied. El orden se resuelve en JS para no necesitar un
+   * índice compuesto nuevo.
+   */
   async categoriasOneShot(soloActivas = true): Promise<CategoriaDoc[]> {
-    const q = query(this.coleccion, orderBy('orden'));
+    const q = soloActivas ? query(this.coleccion, where('activa', '==', true)) : query(this.coleccion);
     const snap = await getDocs(q);
     const todas = snap.docs.map((d) => ({ ...(d.data() as object), id: d.id }) as CategoriaDoc);
-    return soloActivas ? todas.filter((c) => c.activa) : todas;
+    return todas.sort((a, b) => a.orden - b.orden);
   }
 
   async findBySlug(slug: string): Promise<CategoriaDoc | null> {
-    const q = query(this.coleccion, where('slug', '==', slug), limit(1));
+    const q = query(this.coleccion, where('slug', '==', slug), where('activa', '==', true), limit(1));
     const snap = await getDocs(q);
     if (snap.empty) {
       return null;
@@ -84,9 +92,28 @@ export class CategoriesService {
 
   // ---------- escritura (protegida por firestore.rules; requiere admin) ----------
 
+  private registrarAuditoria(
+    batch: ReturnType<typeof writeBatch>,
+    accion: 'crear' | 'actualizar' | 'eliminar',
+    coleccion: 'categorias' | 'videos',
+    docId: string
+  ): void {
+    const entrada = doc(collection(this.firestore, 'auditLog'));
+    batch.set(entrada, {
+      accion,
+      coleccion,
+      docId,
+      adminUid: this.auth.currentUser()?.uid ?? null,
+      createdAt: serverTimestamp()
+    });
+  }
+
   async agregarCategoria(datos: CategoriaFormInput): Promise<void> {
     const countSnap = await getCountFromServer(this.coleccion);
-    await addDoc(this.coleccion, {
+    const ref = doc(this.coleccion);
+
+    const batch = writeBatch(this.firestore);
+    batch.set(ref, {
       nombre: datos.nombre,
       icono: datos.icono,
       slug: slugify(datos.nombre),
@@ -95,6 +122,8 @@ export class CategoriesService {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    this.registrarAuditoria(batch, 'crear', 'categorias', ref.id);
+    await batch.commit();
   }
 
   async actualizarCategoria(id: string, datos: CategoriaFormInput): Promise<void> {
@@ -121,6 +150,7 @@ export class CategoriesService {
       });
     }
 
+    this.registrarAuditoria(batch, 'actualizar', 'categorias', id);
     await batch.commit();
   }
 
@@ -131,6 +161,7 @@ export class CategoriesService {
     const batch = writeBatch(this.firestore);
     videosSnap.forEach((d) => batch.delete(d.ref));
     batch.delete(doc(this.firestore, 'categorias', id));
+    this.registrarAuditoria(batch, 'eliminar', 'categorias', id);
     await batch.commit();
   }
 

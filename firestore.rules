@@ -6,14 +6,114 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Patrón estándar para validar que un campo se escribió con
+    // serverTimestamp(): el motor de reglas resuelve ese sentinel al mismo
+    // valor que `request.time` en el momento del commit.
+    function esTimestampDeServidor(valor) {
+      return valor == request.time;
+    }
+
     match /categorias/{categoriaId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      // Público: solo categorías activas. El admin ve todo (paneles en vivo).
+      allow read: if resource.data.activa == true || isAdmin();
+
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly(
+          ['nombre', 'icono', 'slug', 'orden', 'activa', 'createdAt', 'updatedAt']
+        ) &&
+        request.resource.data.nombre is string &&
+        request.resource.data.nombre.size() > 0 && request.resource.data.nombre.size() <= 60 &&
+        request.resource.data.icono is string &&
+        request.resource.data.icono.size() > 0 && request.resource.data.icono.size() <= 20 &&
+        request.resource.data.slug is string && request.resource.data.slug.size() > 0 &&
+        request.resource.data.orden is number &&
+        request.resource.data.activa is bool &&
+        esTimestampDeServidor(request.resource.data.createdAt) &&
+        esTimestampDeServidor(request.resource.data.updatedAt);
+
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          ['nombre', 'icono', 'slug', 'orden', 'activa', 'updatedAt']
+        ) &&
+        request.resource.data.nombre is string &&
+        request.resource.data.nombre.size() > 0 && request.resource.data.nombre.size() <= 60 &&
+        request.resource.data.icono is string &&
+        request.resource.data.icono.size() > 0 && request.resource.data.icono.size() <= 20 &&
+        request.resource.data.slug is string && request.resource.data.slug.size() > 0 &&
+        request.resource.data.orden is number &&
+        request.resource.data.activa is bool &&
+        esTimestampDeServidor(request.resource.data.updatedAt);
+
+      allow delete: if isAdmin();
     }
 
     match /videos/{videoId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      // Público: solo videos activos. El admin ve todo (paneles en vivo).
+      allow read: if resource.data.activo == true || isAdmin();
+
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly([
+          'categoriaId', 'categoria', 'titulo', 'descripcion', 'fuente',
+          'youtubeId', 'mp4Url', 'posterUrl', 'esPlaceholder', 'orden',
+          'activo', 'createdAt', 'updatedAt', 'createdBy'
+        ]) &&
+        request.resource.data.categoriaId is string && request.resource.data.categoriaId.size() > 0 &&
+        request.resource.data.categoria is string && request.resource.data.categoria.size() > 0 &&
+        request.resource.data.titulo is string &&
+        request.resource.data.titulo.size() > 0 && request.resource.data.titulo.size() <= 120 &&
+        request.resource.data.descripcion is string && request.resource.data.descripcion.size() <= 600 &&
+        request.resource.data.fuente in ['youtube', 'mp4'] &&
+        (request.resource.data.fuente != 'youtube' ||
+          (request.resource.data.youtubeId is string && request.resource.data.youtubeId.size() > 0)) &&
+        (request.resource.data.fuente != 'mp4' ||
+          (request.resource.data.mp4Url is string && request.resource.data.mp4Url.size() > 0)) &&
+        (request.resource.data.youtubeId == null || request.resource.data.youtubeId is string) &&
+        (request.resource.data.mp4Url == null || request.resource.data.mp4Url is string) &&
+        (request.resource.data.posterUrl == null || request.resource.data.posterUrl is string) &&
+        request.resource.data.esPlaceholder is bool &&
+        request.resource.data.orden is number &&
+        request.resource.data.activo is bool &&
+        (request.resource.data.createdBy == null || request.resource.data.createdBy is string) &&
+        esTimestampDeServidor(request.resource.data.createdAt) &&
+        esTimestampDeServidor(request.resource.data.updatedAt);
+
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'titulo', 'descripcion', 'fuente', 'youtubeId', 'mp4Url',
+          'posterUrl', 'activo', 'updatedAt', 'categoria'
+        ]) &&
+        request.resource.data.categoria is string && request.resource.data.categoria.size() > 0 &&
+        request.resource.data.titulo is string &&
+        request.resource.data.titulo.size() > 0 && request.resource.data.titulo.size() <= 120 &&
+        request.resource.data.descripcion is string && request.resource.data.descripcion.size() <= 600 &&
+        request.resource.data.fuente in ['youtube', 'mp4'] &&
+        (request.resource.data.fuente != 'youtube' ||
+          (request.resource.data.youtubeId is string && request.resource.data.youtubeId.size() > 0)) &&
+        (request.resource.data.fuente != 'mp4' ||
+          (request.resource.data.mp4Url is string && request.resource.data.mp4Url.size() > 0)) &&
+        (request.resource.data.youtubeId == null || request.resource.data.youtubeId is string) &&
+        (request.resource.data.mp4Url == null || request.resource.data.mp4Url is string) &&
+        (request.resource.data.posterUrl == null || request.resource.data.posterUrl is string) &&
+        request.resource.data.activo is bool &&
+        esTimestampDeServidor(request.resource.data.updatedAt);
+
+      allow delete: if isAdmin();
+    }
+
+    // Bitácora de auditoría: solo inserción por un admin, nunca editable ni
+    // borrable, y con una forma fija (ver categories.service.ts/videos.service.ts).
+    match /auditLog/{entryId} {
+      allow read: if isAdmin();
+
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['accion', 'coleccion', 'docId', 'adminUid', 'createdAt']) &&
+        request.resource.data.accion in ['crear', 'actualizar', 'eliminar'] &&
+        request.resource.data.coleccion in ['categorias', 'videos'] &&
+        request.resource.data.docId is string && request.resource.data.docId.size() > 0 &&
+        request.resource.data.adminUid == request.auth.uid &&
+        esTimestampDeServidor(request.resource.data.createdAt);
+
+      allow update, delete: if false;
     }
 
     // Lista blanca de administradores: solo lectura del propio uid, nunca
