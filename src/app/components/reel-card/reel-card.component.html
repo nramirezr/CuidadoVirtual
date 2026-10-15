@@ -1,12 +1,16 @@
 <div class="media">
-  <div *ngIf="video.fuente === 'youtube'" class="youtube-wrapper">
-    <div [id]="youtubeContainerId"></div>
-  </div>
+  <img
+    *ngIf="video.fuente === 'youtube' && mostrarMiniatura()"
+    class="yt-thumb"
+    [src]="miniaturaYoutube"
+    alt=""
+    decoding="async"
+  />
   <video
     *ngIf="video.fuente === 'mp4'"
     #videoEl
     class="mp4-video"
-    [src]="video.mp4Url"
+    [attr.src]="estaCerca() ? video.mp4Url : null"
     [poster]="video.posterUrl"
     loop
     playsinline

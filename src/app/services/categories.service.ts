@@ -7,7 +7,6 @@ import {
   getCountFromServer,
   getDoc,
   getDocs,
-  getFirestore,
   limit,
   orderBy,
   query,
@@ -16,6 +15,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { FIREBASE_APP } from '../core/firebase-app.provider';
+import { obtenerFirestore } from '../core/firestore-instance.util';
 import { collectionSnapshots$ } from '../core/firestore-rx.util';
 import { CategoriaDoc } from '../models/categoria-doc.model';
 import { slugify } from '../utils/slug.util';
@@ -37,7 +37,7 @@ export interface CategoriaFormInput {
 export class CategoriesService {
   private readonly app = inject(FIREBASE_APP);
   private readonly auth = inject(AuthService);
-  private readonly firestore: Firestore = getFirestore(this.app);
+  private readonly firestore: Firestore = obtenerFirestore(this.app);
   private readonly coleccion = collection(this.firestore, 'categorias');
 
   // ---------- lectura ----------

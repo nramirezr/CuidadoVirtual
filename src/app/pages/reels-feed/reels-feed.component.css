@@ -42,9 +42,45 @@
   text-overflow: ellipsis;
 }
 
-.reels-scroll-container {
+.viewport {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.player-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #000;
+  pointer-events: none;
+}
+
+.player-layer ::ng-deep .ranura-youtube {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* "cover": un iframe 16:9 llenando un contenedor vertical */
+.player-layer ::ng-deep iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw; /* 100 * 9/16 */
+  min-height: 100%;
+  min-width: 177.78vh; /* 100 * 16/9 */
+  transform: translate(-50%, -50%);
+  border: 0;
+  pointer-events: none;
+}
+
+.reels-scroll-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;

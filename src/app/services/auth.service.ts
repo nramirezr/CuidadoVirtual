@@ -7,7 +7,8 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import { Firestore, doc, getDoc, getFirestore } from 'firebase/firestore';
+import { Firestore, doc, getDoc } from 'firebase/firestore';
+import { obtenerFirestore } from '../core/firestore-instance.util';
 import { FIREBASE_APP } from '../core/firebase-app.provider';
 
 /**
@@ -20,7 +21,7 @@ import { FIREBASE_APP } from '../core/firebase-app.provider';
 export class AuthService {
   private readonly app = inject(FIREBASE_APP);
   private readonly auth: Auth = getAuth(this.app);
-  private readonly firestore: Firestore = getFirestore(this.app);
+  private readonly firestore: Firestore = obtenerFirestore(this.app);
 
   private readonly currentUserSignal = signal<User | null>(null);
   private readonly isAdminSignal = signal(false);

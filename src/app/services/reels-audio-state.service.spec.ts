@@ -29,6 +29,20 @@ describe('ReelsAudioStateService', () => {
     }
   });
 
+  it('should always start muted on iPhone, where the first video cannot autoplay with sound', () => {
+    Object.defineProperty(navigator, 'userActivation', { value: { hasBeenActive: true }, configurable: true });
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1',
+      configurable: true
+    });
+    try {
+      expect(new ReelsAudioStateService().muted()).toBeTrue();
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>)['userActivation'];
+      delete (navigator as unknown as Record<string, unknown>)['userAgent'];
+    }
+  });
+
   it('should flip the muted state on toggle', () => {
     service.toggle();
     expect(service.muted()).toBeFalse();

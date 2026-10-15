@@ -1,10 +1,11 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild, computed, inject, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { ReelCardComponent } from '../../components/reel-card/reel-card.component';
 import { CategoriesService } from '../../services/categories.service';
 import { VideosService } from '../../services/videos.service';
+import { ReelsPlayerPoolService } from '../../services/reels-player-pool.service';
 import { CategoriaDoc } from '../../models/categoria-doc.model';
 import { VideoDoc } from '../../models/video-doc.model';
 
@@ -29,9 +30,21 @@ const ESTADO_INICIAL: FeedState = {
   templateUrl: './reels-feed.component.html',
   styleUrl: './reels-feed.component.css'
 })
-export class ReelsFeedComponent {
+export class ReelsFeedComponent implements OnDestroy {
   private readonly categoriesService = inject(CategoriesService);
   private readonly videosService = inject(VideosService);
+  private readonly pool = inject(ReelsPlayerPoolService);
+
+  /** El contenedor aparece y desaparece con el estado (cargando / lista); los
+   * reproductores compartidos se crean al aparecer y se liberan al desaparecer. */
+  @ViewChild('capaReproductores')
+  set capaReproductores(ref: ElementRef<HTMLElement> | undefined) {
+    if (ref) {
+      this.pool.registrarCapa(ref.nativeElement);
+    } else {
+      this.pool.liberar();
+    }
+  }
 
   /**
    * Bindeado automáticamente desde el segmento :categoriaSlug de la ruta.
@@ -69,4 +82,17 @@ export class ReelsFeedComponent {
   readonly categoriaNoEncontrada = computed(() => this.estado().noEncontrada);
 
   readonly videosFiltrados = computed(() => this.estado().videos);
+
+  onScroll(): void {
+    this.pool.marcarMovimiento();
+  }
+
+  /** Fin de un toque/swipe: gesto válido para que Safari permita sonido. */
+  onGesto(): void {
+    this.pool.desbloquearAudio();
+  }
+
+  ngOnDestroy(): void {
+    this.pool.liberar();
+  }
 }

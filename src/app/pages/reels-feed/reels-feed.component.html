@@ -17,10 +17,19 @@
       <p>Cargando…</p>
     </div>
   } @else if (modoTodos() || categoriaActual()) {
-    <div class="reels-scroll-container">
-      @for (v of videosFiltrados(); track v.id) {
-        <app-reel-card [video]="v"></app-reel-card>
-      }
+    <div class="viewport">
+      <!-- Los dos reproductores de YouTube compartidos viven aquí, detrás de la lista. -->
+      <div #capaReproductores class="player-layer"></div>
+      <div
+        class="reels-scroll-container"
+        (scroll)="onScroll()"
+        (touchend)="onGesto()"
+        (click)="onGesto()"
+      >
+        @for (v of videosFiltrados(); track v.id) {
+          <app-reel-card [video]="v"></app-reel-card>
+        }
+      </div>
     </div>
   } @else {
     <div class="empty-state">

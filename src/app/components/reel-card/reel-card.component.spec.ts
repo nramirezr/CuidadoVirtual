@@ -1,29 +1,21 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReelCardComponent } from './reel-card.component';
-import { YoutubeApiLoaderService } from '../../services/youtube-api-loader.service';
+import { ReelsPlayerPoolService } from '../../services/reels-player-pool.service';
 import { videoMod } from '../../models/videoMod.model';
-
-class FakeYTPlayer {
-  static instances: FakeYTPlayer[] = [];
-  playVideo = jasmine.createSpy('playVideo');
-  pauseVideo = jasmine.createSpy('pauseVideo');
-  seekTo = jasmine.createSpy('seekTo');
-  unloadModule = jasmine.createSpy('unloadModule');
-  mute = jasmine.createSpy('mute');
-  unMute = jasmine.createSpy('unMute');
-  destroy = jasmine.createSpy('destroy');
-
-  constructor(public elementId: string, public options: any) {
-    FakeYTPlayer.instances.push(this);
-    options.events?.onReady?.({ target: this });
-  }
-}
 
 describe('ReelCardComponent', () => {
   let fixture: ComponentFixture<ReelCardComponent>;
   let component: ReelCardComponent;
-  let observeSpy: jasmine.Spy;
-  let intersectionCallback: (entries: Partial<IntersectionObserverEntry>[]) => void;
+  let poolFake: {
+    activa: ReturnType<typeof signal<{ key: string | null; reproduciendo: boolean; mostrarBotonPlay: boolean }>>;
+    enMovimiento: ReturnType<typeof signal<boolean>>;
+    activar: jasmine.Spy;
+    precargar: jasmine.Spy;
+    reproducirManual: jasmine.Spy;
+  };
+  let visibilityCallback: (entries: Partial<IntersectionObserverEntry>[]) => void;
+  let proximityCallback: (entries: Partial<IntersectionObserverEntry>[]) => void;
 
   const youtubeVideo: videoMod = {
     id: 'test-yt',
@@ -44,26 +36,26 @@ describe('ReelCardComponent', () => {
   };
 
   beforeEach(async () => {
-    (window as any).YT = {
-      Player: FakeYTPlayer,
-      PlayerState: { UNSTARTED: -1, ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 }
+    poolFake = {
+      activa: signal({ key: null, reproduciendo: false, mostrarBotonPlay: false }),
+      enMovimiento: signal(false),
+      activar: jasmine.createSpy('activar'),
+      precargar: jasmine.createSpy('precargar'),
+      reproducirManual: jasmine.createSpy('reproducirManual')
     };
-    FakeYTPlayer.instances = [];
 
-    observeSpy = jasmine.createSpy('observe');
-    spyOn(window as any, 'IntersectionObserver').and.callFake(function (callback: any) {
-      intersectionCallback = callback;
-      return { observe: observeSpy, disconnect: jasmine.createSpy('disconnect') };
+    spyOn(window as any, 'IntersectionObserver').and.callFake(function (callback: any, options: any) {
+      if (options?.rootMargin) {
+        proximityCallback = callback;
+      } else {
+        visibilityCallback = callback;
+      }
+      return { observe: jasmine.createSpy('observe'), disconnect: jasmine.createSpy('disconnect') };
     });
 
     await TestBed.configureTestingModule({
       imports: [ReelCardComponent],
-      providers: [
-        {
-          provide: YoutubeApiLoaderService,
-          useValue: { load: () => Promise.resolve() }
-        }
-      ]
+      providers: [{ provide: ReelsPlayerPoolService, useValue: poolFake }]
     }).compileComponents();
   });
 
@@ -74,191 +66,128 @@ describe('ReelCardComponent', () => {
     fixture.detectChanges();
   }
 
+  const visible = (): void =>
+    visibilityCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+  const fueraDePantalla = (): void =>
+    visibilityCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
+  const cerca = (valor: boolean): void =>
+    proximityCallback([{ isIntersecting: valor } as IntersectionObserverEntry]);
+
   it('should create', () => {
     createComponent(mp4Video);
     expect(component).toBeTruthy();
   });
 
-  it('should render a youtube target for youtube-sourced videos', async () => {
+  it('should not create an iframe per card: youtube cards only show a thumbnail', () => {
     createComponent(youtubeVideo);
-    await fixture.whenStable();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('.youtube-wrapper')).toBeTruthy();
+    expect(el.querySelector('iframe')).toBeFalsy();
     expect(el.querySelector('video.mp4-video')).toBeFalsy();
+    const thumb = el.querySelector('img.yt-thumb') as HTMLImageElement;
+    expect(thumb).toBeTruthy();
+    expect(thumb.src).toContain('abc123');
   });
 
   it('should render a video tag for mp4-sourced videos', () => {
     createComponent(mp4Video);
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('video.mp4-video')).toBeTruthy();
-    expect(el.querySelector('.youtube-wrapper')).toBeFalsy();
+    expect(el.querySelector('img.yt-thumb')).toBeFalsy();
   });
 
   it('should toggle the shared mute state when the mute button is clicked', () => {
     createComponent(mp4Video);
-    expect(component.audioState.muted()).toBeTrue();
+    const antes = component.audioState.muted();
 
     const button: HTMLButtonElement = fixture.nativeElement.querySelector('.mute-button');
     button.click();
 
-    expect(component.audioState.muted()).toBeFalse();
+    expect(component.audioState.muted()).toBe(!antes);
   });
 
-  it('should play the youtube player when visible and pause when it leaves view', async () => {
-    createComponent(youtubeVideo);
-    await fixture.whenStable();
+  describe('youtube card', () => {
+    it('should ask the shared player to play its video when it becomes visible', () => {
+      createComponent(youtubeVideo);
+      visible();
+      expect(poolFake.activar).toHaveBeenCalledWith('test-yt', 'abc123');
+    });
 
-    const player = FakeYTPlayer.instances[0];
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-    expect(player.playVideo).toHaveBeenCalled();
+    it('should not touch the shared player when it leaves the screen (the next card takes over)', () => {
+      createComponent(youtubeVideo);
+      visible();
+      poolFake.activar.calls.reset();
+      fueraDePantalla();
+      expect(poolFake.activar).not.toHaveBeenCalled();
+    });
 
-    intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
-    expect(player.pauseVideo).toHaveBeenCalled();
+    it('should preload its video when it is the next one (near but not visible)', () => {
+      createComponent(youtubeVideo);
+      cerca(true);
+      expect(poolFake.precargar).toHaveBeenCalledWith('abc123');
+    });
+
+    it('should not preload when it is already the visible card', () => {
+      createComponent(youtubeVideo);
+      visible();
+      cerca(true);
+      expect(poolFake.precargar).not.toHaveBeenCalled();
+    });
+
+    it('should hide the thumbnail once its video is playing, and show it again while scrolling', () => {
+      createComponent(youtubeVideo);
+      poolFake.activa.set({ key: 'test-yt', reproduciendo: true, mostrarBotonPlay: false });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('img.yt-thumb')).toBeFalsy();
+
+      poolFake.enMovimiento.set(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('img.yt-thumb')).toBeTruthy();
+    });
+
+    it('should keep the thumbnail when another card is the one playing', () => {
+      createComponent(youtubeVideo);
+      poolFake.activa.set({ key: 'otra', reproduciendo: true, mostrarBotonPlay: false });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('img.yt-thumb')).toBeTruthy();
+    });
+
+    it('should show the manual play button only for the active card and delegate the tap', () => {
+      createComponent(youtubeVideo);
+      poolFake.activa.set({ key: 'otra', reproduciendo: false, mostrarBotonPlay: true });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.play-fallback-button')).toBeFalsy();
+
+      poolFake.activa.set({ key: 'test-yt', reproduciendo: false, mostrarBotonPlay: true });
+      fixture.detectChanges();
+      const boton: HTMLButtonElement = fixture.nativeElement.querySelector('.play-fallback-button');
+      expect(boton).toBeTruthy();
+
+      boton.click();
+      expect(poolFake.reproducirManual).toHaveBeenCalled();
+    });
   });
 
-  it('should rewind to the start when leaving view, so scrolling back replays from 0', async () => {
-    // Reporte real: al volver a un video ya visto, retomaba donde había
-    // quedado en vez de empezar de nuevo, a diferencia de otros feeds de reels.
-    createComponent(youtubeVideo);
-    await fixture.whenStable();
+  describe('mp4 card', () => {
+    it('should only set the mp4 src while the card is near the viewport', () => {
+      createComponent(mp4Video);
+      const el: HTMLVideoElement = fixture.nativeElement.querySelector('video.mp4-video');
+      expect(el.getAttribute('src')).toBeNull();
 
-    const player = FakeYTPlayer.instances[0];
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
-    intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
+      cerca(true);
+      fixture.detectChanges();
+      expect(el.getAttribute('src')).toBe(mp4Video.mp4Url!);
 
-    expect(player.seekTo).toHaveBeenCalledWith(0, true);
+      cerca(false);
+      fixture.detectChanges();
+      expect(el.getAttribute('src')).toBeNull();
+    });
+
+    it('should not use the shared youtube player', () => {
+      createComponent(mp4Video);
+      cerca(true);
+      visible();
+      expect(poolFake.activar).not.toHaveBeenCalled();
+      expect(poolFake.precargar).not.toHaveBeenCalled();
+    });
   });
-
-  it('should not seek a player that never started (seekTo would make YouTube start playing it)', async () => {
-    createComponent(youtubeVideo);
-    await fixture.whenStable();
-
-    const player = FakeYTPlayer.instances[0];
-    intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
-
-    expect(player.seekTo).not.toHaveBeenCalled();
-  });
-
-  it('should pause a youtube player that starts playing while its card is not visible (scroll race)', async () => {
-    createComponent(youtubeVideo);
-    await fixture.whenStable();
-
-    const player = FakeYTPlayer.instances[0];
-    player.pauseVideo.calls.reset();
-    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
-
-    expect(player.pauseVideo).toHaveBeenCalled();
-    expect(component.mostrarBotonPlay()).toBeFalse();
-  });
-
-  it('should retry muted when autoplay with sound never starts', fakeAsync(() => {
-    createComponent(youtubeVideo);
-    tick();
-    component.audioState.muted.set(false);
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-
-    const player = FakeYTPlayer.instances[0];
-    player.playVideo.calls.reset();
-    tick(1200);
-
-    expect(component.audioState.muted()).toBeTrue();
-    expect(player.playVideo).toHaveBeenCalled();
-    expect(component.mostrarBotonPlay()).toBeFalse();
-
-    tick(1200);
-    expect(component.mostrarBotonPlay()).toBeTrue();
-  }));
-
-  it('should disable YouTube captions so burned-in subtitles are not shown twice', async () => {
-    createComponent(youtubeVideo);
-    await fixture.whenStable();
-
-    const player = FakeYTPlayer.instances[0];
-    expect(player.options.playerVars.cc_load_policy).toBe(0);
-    expect(player.unloadModule).toHaveBeenCalledWith('captions');
-
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-    player.unloadModule.calls.reset();
-    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
-    expect(player.unloadModule).toHaveBeenCalledWith('captions');
-    expect(player.unloadModule).toHaveBeenCalledWith('cc');
-  });
-
-  it('should play as soon as the youtube player is ready, even if the card became visible first (race condition)', async () => {
-    // Reproduce el bug real: la tarjeta ya está visible en pantalla mientras el
-    // iframe de YouTube todavía está cargando de forma asíncrona (this.ytPlayer
-    // aún no existe cuando el IntersectionObserver dispara su callback).
-    createComponent(youtubeVideo);
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-
-    // Recién ahora se resuelve la carga async del reproductor (onReady se dispara).
-    await fixture.whenStable();
-
-    const player = FakeYTPlayer.instances[0];
-    expect(player.playVideo).toHaveBeenCalled();
-  });
-
-  it('should show a manual play fallback if the video stays visible but never actually starts playing', fakeAsync(() => {
-    // Simula lo que reportó un usuario real: el autoplay del iframe de YouTube
-    // no arranca (a diferencia de un <video> nativo, no está garantizado en
-    // todos los navegadores/redes). onStateChange nunca llega a PLAYING.
-    createComponent(youtubeVideo);
-    tick();
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-    fixture.detectChanges();
-
-    expect(component.mostrarBotonPlay()).toBeFalse();
-
-    tick(1200);
-    fixture.detectChanges();
-
-    expect(component.mostrarBotonPlay()).toBeTrue();
-    expect(fixture.nativeElement.querySelector('.play-fallback-button')).toBeTruthy();
-  }));
-
-  it('should hide the fallback button once playback actually starts (onStateChange PLAYING)', fakeAsync(() => {
-    createComponent(youtubeVideo);
-    tick();
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-    fixture.detectChanges();
-
-    const player = FakeYTPlayer.instances[0];
-    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
-
-    tick(1200);
-    fixture.detectChanges();
-
-    expect(component.mostrarBotonPlay()).toBeFalse();
-  }));
-
-  it('should retry playback when the fallback button is tapped', fakeAsync(() => {
-    createComponent(youtubeVideo);
-    tick();
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-    fixture.detectChanges();
-    tick(1200);
-    fixture.detectChanges();
-
-    const player = FakeYTPlayer.instances[0];
-    player.playVideo.calls.reset();
-
-    const fallback: HTMLButtonElement = fixture.nativeElement.querySelector('.play-fallback-button');
-    fallback.click();
-
-    expect(player.playVideo).toHaveBeenCalled();
-  }));
-
-  it('should not show the fallback button after scrolling away before the grace period ends', fakeAsync(() => {
-    createComponent(youtubeVideo);
-    tick();
-    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
-    fixture.detectChanges();
-
-    intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
-    tick(1200);
-    fixture.detectChanges();
-
-    expect(component.mostrarBotonPlay()).toBeFalse();
-  }));
 });

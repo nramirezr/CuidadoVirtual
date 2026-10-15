@@ -6,7 +6,6 @@ import {
   doc,
   getCountFromServer,
   getDocs,
-  getFirestore,
   orderBy,
   query,
   serverTimestamp,
@@ -14,6 +13,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { FIREBASE_APP } from '../core/firebase-app.provider';
+import { obtenerFirestore } from '../core/firestore-instance.util';
 import { collectionSnapshots$ } from '../core/firestore-rx.util';
 import { VideoDoc } from '../models/video-doc.model';
 import { AuthService } from './auth.service';
@@ -38,7 +38,7 @@ export interface VideoFormInput {
 export class VideosService {
   private readonly app = inject(FIREBASE_APP);
   private readonly auth = inject(AuthService);
-  private readonly firestore: Firestore = getFirestore(this.app);
+  private readonly firestore: Firestore = obtenerFirestore(this.app);
   private readonly coleccion = collection(this.firestore, 'videos');
 
   // ---------- lectura ----------

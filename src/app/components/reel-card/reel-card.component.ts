@@ -5,6 +5,7 @@ import {
   Input,
   OnDestroy,
   ViewChild,
+  computed,
   effect,
   inject,
   signal
@@ -12,13 +13,21 @@ import {
 import { CommonModule } from '@angular/common';
 import { videoMod } from '../../models/videoMod.model';
 import { ReelsAudioStateService } from '../../services/reels-audio-state.service';
-import { YoutubeApiLoaderService } from '../../services/youtube-api-loader.service';
+import { ReelsPlayerPoolService } from '../../services/reels-player-pool.service';
 
-/** Cuánto esperar visible sin que arranque la reproducción antes de mostrar
- * el botón manual de "reproducir" (evita que parpadee en el caso normal,
- * donde el autoplay arranca casi de inmediato). */
-const ESPERA_ANTES_DE_MOSTRAR_PLAY_MS = 1200;
+/** Cuánto esperar visible sin que arranque un video mp4 antes de recurrir al
+ * respaldo (silencio y, si aún así no arranca, botón manual de "reproducir"). */
+const ESPERA_ANTES_DE_MOSTRAR_PLAY_MS = 1500;
 
+/**
+ * Una tarjeta del feed.
+ *
+ * Los videos de YouTube NO se reproducen aquí: viven en dos reproductores
+ * compartidos (ver ReelsPlayerPoolService) que se muestran "por detrás" de la
+ * tarjeta activa. La tarjeta solo avisa al servicio cuándo está en pantalla y
+ * muestra su miniatura mientras ese video no se está reproduciendo. Los videos
+ * mp4 sí son un <video> propio de la tarjeta.
+ */
 @Component({
   selector: 'app-reel-card',
   standalone: true,
@@ -32,50 +41,72 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
   @ViewChild('videoEl') videoElRef?: ElementRef<HTMLVideoElement>;
 
   readonly audioState = inject(ReelsAudioStateService);
-  private readonly youtubeApiLoader = inject(YoutubeApiLoaderService);
+  private readonly pool = inject(ReelsPlayerPoolService);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
 
   private observer?: IntersectionObserver;
-  private ytPlayer?: YT.Player;
+  private proximityObserver?: IntersectionObserver;
   private mostrarPlayTimeoutId?: ReturnType<typeof setTimeout>;
 
-  /** Último estado de visibilidad conocido, para poder reproducir en cuanto el
-   * reproductor de YouTube quede listo aunque eso ocurra después de que el
-   * IntersectionObserver ya haya disparado su primer callback. */
+  /** true mientras la tarjeta está cerca del área visible (el siguiente video).
+   * Solo entonces se precarga: el mp4 recién ahí recibe su `src`, y el video de
+   * YouTube se deja listo en el reproductor libre. */
+  readonly estaCerca = signal(false);
+
+  /** Último estado de visibilidad conocido. */
   private readonly isVisible = signal(false);
 
-  /** true una vez que el video efectivamente empieza a reproducirse (no solo
-   * que se le pidió reproducir — el autoplay de un iframe de YouTube no está
-   * garantizado en todos los navegadores/redes, a diferencia de un <video>
-   * nativo). Mientras esté en false y la tarjeta lleve un momento visible, se
-   * muestra un botón para reproducir manualmente, como red de seguridad. */
-  private readonly reproduciendo = signal(false);
-  readonly mostrarBotonPlay = signal(false);
+  /** Solo mp4: true una vez que el video efectivamente empieza a reproducirse. */
+  private readonly reproduciendoMp4 = signal(false);
+  private readonly botonPlayMp4 = signal(false);
+
+  private get esYoutube(): boolean {
+    return this.video.fuente === 'youtube';
+  }
+
+  /** ¿Es el video de esta tarjeta el que está mostrando el reproductor compartido? */
+  readonly esActiva = computed(() => this.pool.activa().key === this.video?.id);
+
+  readonly reproduciendo = computed(() =>
+    this.esYoutube ? this.esActiva() && this.pool.activa().reproduciendo : this.reproduciendoMp4()
+  );
+
+  /** La miniatura tapa el reproductor compartido salvo cuando este video ya se
+   * está reproduciendo y la lista está quieta (durante un swipe cada tarjeta
+   * muestra su imagen para que el movimiento se vea natural). */
+  readonly mostrarMiniatura = computed(
+    () => this.esYoutube && (!this.reproduciendo() || this.pool.enMovimiento())
+  );
+
+  readonly mostrarBotonPlay = computed(() =>
+    this.esYoutube ? this.esActiva() && this.pool.activa().mostrarBotonPlay : this.botonPlayMp4()
+  );
 
   constructor() {
     effect(() => {
       const muted = this.audioState.muted();
-      if (this.ytPlayer) {
-        muted ? this.ytPlayer.mute() : this.ytPlayer.unMute();
-      }
       if (this.videoElRef) {
         this.videoElRef.nativeElement.muted = muted;
       }
     });
   }
 
-  get youtubeContainerId(): string {
-    return `yt-player-${this.video.id}`;
+  get miniaturaYoutube(): string {
+    return `https://i.ytimg.com/vi/${this.video.youtubeId}/hqdefault.jpg`;
   }
 
   ngAfterViewInit(): void {
-    if (this.video.fuente === 'youtube') {
-      this.initYoutubePlayer();
-    } else {
+    if (!this.esYoutube) {
       const el = this.videoElRef?.nativeElement;
+      el?.addEventListener('loadeddata', () => {
+        if (this.isVisible() && !this.reproduciendoMp4()) {
+          this.play();
+          this.programarRespaldoMp4();
+        }
+      });
       el?.addEventListener('playing', () => {
         if (this.isVisible()) {
-          this.onReproduccionIniciada();
+          this.alIniciarMp4();
         } else {
           this.pause();
         }
@@ -83,16 +114,27 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
       el?.addEventListener('loadedmetadata', () => this.desactivarSubtitulosNativos(el));
     }
 
+    // Se declara antes que el observer de visibilidad para que la tarjeta
+    // cercana ya esté precargada cuando llegue a ser visible.
+    const contenedor = (this.elementRef.nativeElement as HTMLElement).closest('.reels-scroll-container');
+    this.proximityObserver = new IntersectionObserver(
+      ([entry]) => this.onCambioDeCercania(entry.isIntersecting),
+      // Solo se anticipa el video de ABAJO (el siguiente). El -2px evita que la
+      // tarjeta de arriba, cuyo borde toca el del área visible, cuente como
+      // "intersecta" (un borde que solo se toca ya es intersección).
+      { root: contenedor, rootMargin: '-2px 0px 50% 0px' }
+    );
+    this.proximityObserver.observe(this.elementRef.nativeElement);
+
     this.observer = new IntersectionObserver(
       ([entry]) => {
         const visible = entry.isIntersecting && entry.intersectionRatio > 0.6;
         this.isVisible.set(visible);
         if (visible) {
-          this.play();
-          this.programarBotonPlayDeRespaldo();
-        } else {
+          this.alVolverseVisible();
+        } else if (!this.esYoutube) {
           this.pause();
-          this.cancelarBotonPlayDeRespaldo();
+          this.cancelarRespaldoMp4();
         }
       },
       { threshold: [0, 0.6, 1] }
@@ -102,8 +144,8 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.observer?.disconnect();
-    this.ytPlayer?.destroy();
-    this.cancelarBotonPlayDeRespaldo();
+    this.proximityObserver?.disconnect();
+    this.cancelarRespaldoMp4();
   }
 
   onToggleMute(): void {
@@ -111,110 +153,90 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Reintento manual: el autoplay de un iframe de YouTube (a diferencia de un
-   * <video> nativo) no está garantizado en todos los navegadores/redes, así
-   * que se ofrece este botón como red de seguridad cuando no arrancó solo.
+   * Reintento manual: el autoplay no está garantizado en todos los navegadores,
+   * así que se ofrece este botón como red de seguridad cuando no arrancó solo.
    */
   onTapPlay(): void {
+    if (this.esYoutube) {
+      this.pool.reproducirManual();
+    } else {
+      this.play();
+    }
+  }
+
+  private alVolverseVisible(): void {
+    if (this.esYoutube) {
+      this.pool.activar(this.video.id, this.video.youtubeId ?? '');
+      return;
+    }
     this.play();
+    const el = this.videoElRef?.nativeElement;
+    // Si el mp4 aún está cargando no es un autoplay bloqueado: el respaldo se
+    // arma recién cuando tenga datos (evento loadeddata).
+    if (el && el.readyState >= 2) {
+      this.programarRespaldoMp4();
+    }
   }
 
-  private onReproduccionIniciada(): void {
-    this.reproduciendo.set(true);
-    this.mostrarBotonPlay.set(false);
-    this.cancelarBotonPlayDeRespaldo();
-  }
-
-  private programarBotonPlayDeRespaldo(): void {
-    this.cancelarBotonPlayDeRespaldo();
-    this.mostrarPlayTimeoutId = setTimeout(() => {
-      if (!this.isVisible() || this.reproduciendo()) {
-        return;
+  private onCambioDeCercania(cerca: boolean): void {
+    if (this.estaCerca() === cerca) {
+      return;
+    }
+    this.estaCerca.set(cerca);
+    if (this.esYoutube) {
+      if (cerca && !this.isVisible() && this.video.youtubeId) {
+        this.pool.precargar(this.video.youtubeId);
       }
-      if (!this.audioState.muted()) {
-        // Probablemente el navegador bloqueó el autoplay con sonido: se
-        // reintenta en silencio (la persona puede reactivar el sonido).
-        this.audioState.muted.set(true);
-        this.play();
-        this.programarBotonPlayDeRespaldo();
-        return;
-      }
-      this.mostrarBotonPlay.set(true);
-    }, ESPERA_ANTES_DE_MOSTRAR_PLAY_MS);
+    } else if (!cerca) {
+      this.descargarMp4();
+    }
   }
 
-  private cancelarBotonPlayDeRespaldo(): void {
+  // ---------- video mp4 propio ----------
+
+  private alIniciarMp4(): void {
+    this.reproduciendoMp4.set(true);
+    this.botonPlayMp4.set(false);
+    this.cancelarRespaldoMp4();
+  }
+
+  private programarRespaldoMp4(): void {
+    this.cancelarRespaldoMp4();
+    this.mostrarPlayTimeoutId = setTimeout(() => this.evaluarArranqueMp4(), ESPERA_ANTES_DE_MOSTRAR_PLAY_MS);
+  }
+
+  /** Si el mp4 no arrancó: primero en silencio (el sonido pudo ser bloqueado), luego botón ▶. */
+  private evaluarArranqueMp4(): void {
+    const el = this.videoElRef?.nativeElement;
+    if (!el || !this.isVisible() || this.reproduciendoMp4()) {
+      return;
+    }
+    if (!this.audioState.muted()) {
+      this.audioState.muted.set(true);
+      el.muted = true;
+      this.play();
+      this.mostrarPlayTimeoutId = setTimeout(() => this.evaluarArranqueMp4(), ESPERA_ANTES_DE_MOSTRAR_PLAY_MS);
+      return;
+    }
+    this.botonPlayMp4.set(true);
+  }
+
+  private cancelarRespaldoMp4(): void {
     if (this.mostrarPlayTimeoutId !== undefined) {
       clearTimeout(this.mostrarPlayTimeoutId);
       this.mostrarPlayTimeoutId = undefined;
     }
-    this.mostrarBotonPlay.set(false);
+    this.botonPlayMp4.set(false);
   }
 
-  private async initYoutubePlayer(): Promise<void> {
-    await this.youtubeApiLoader.load();
-    this.ytPlayer = new YT.Player(this.youtubeContainerId, {
-      videoId: this.video.youtubeId,
-      playerVars: {
-        mute: this.audioState.muted() ? 1 : 0,
-        autoplay: 0,
-        playsinline: 1,
-        controls: 0,
-        rel: 0,
-        modestbranding: 1,
-        cc_load_policy: 0,
-        loop: 1,
-        playlist: this.video.youtubeId
-      },
-      events: {
-        // Se usa `event.target` (el player que entrega la propia API) en vez de
-        // `this.ytPlayer`: `onReady` puede dispararse antes de que termine de
-        // ejecutarse `this.ytPlayer = new YT.Player(...)`, así que el campo de
-        // la instancia todavía podría no estar asignado en ese instante.
-        onReady: (event) => {
-          const player = event.target;
-          if (!this.audioState.muted()) {
-            player.unMute();
-          }
-          this.desactivarSubtitulosDeYoutube(player);
-          // La carga del iframe de YouTube es async y puede terminar después de
-          // que el IntersectionObserver ya haya intentado reproducir sin éxito
-          // (el player aún no existía). Si la tarjeta ya está visible al quedar
-          // listo el reproductor, se reproduce recién ahora.
-          if (this.isVisible()) {
-            player.playVideo();
-          }
-        },
-        onStateChange: (event) => {
-          if (event.data === YT.PlayerState.PLAYING && !this.isVisible()) {
-            // Carrera de scroll: YouTube a veces ignora un pauseVideo() pedido
-            // mientras aún estaba cargando y arranca igual. Si ya no está en
-            // pantalla, se vuelve a pausar para no tener dos videos sonando.
-            event.target.pauseVideo();
-            return;
-          }
-          if (event.data === YT.PlayerState.PLAYING) {
-            this.onReproduccionIniciada();
-            // El módulo de subtítulos de YouTube se carga recién al reproducir,
-            // así que hay que volver a apagarlo en este momento.
-            this.desactivarSubtitulosDeYoutube(event.target);
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Los videos ya traen sus subtítulos incrustados en la imagen; si además
-   * se activan los de YouTube (por preferencia del espectador o subtítulos
-   * automáticos) se ven duplicados. `cc_load_policy: 0` no basta cuando el
-   * usuario tiene los subtítulos activados en su cuenta, y `unloadModule` no
-   * está en los tipos oficiales de la API.
-   */
-  private desactivarSubtitulosDeYoutube(player: YT.Player): void {
-    const p = player as unknown as { unloadModule?: (modulo: string) => void };
-    p.unloadModule?.('captions');
-    p.unloadModule?.('cc');
+  private descargarMp4(): void {
+    const el = this.videoElRef?.nativeElement;
+    if (el) {
+      el.pause();
+      el.removeAttribute('src');
+      el.load();
+    }
+    this.reproduciendoMp4.set(false);
   }
 
   private desactivarSubtitulosNativos(el: HTMLVideoElement): void {
@@ -224,31 +246,23 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
   }
 
   private play(): void {
-    if (this.video.fuente === 'youtube') {
-      this.ytPlayer?.playVideo();
-    } else {
-      this.videoElRef?.nativeElement.play().catch(() => {});
-    }
+    const el = this.videoElRef?.nativeElement;
+    el?.play().catch(() => {
+      // Autoplay con sonido bloqueado: se reintenta en silencio.
+      if (el && !el.muted) {
+        this.audioState.muted.set(true);
+        el.muted = true;
+        el.play().catch(() => {});
+      }
+    });
   }
 
   private pause(): void {
-    if (this.video.fuente === 'youtube') {
-      this.ytPlayer?.pauseVideo();
-      // Al salir de pantalla se reinicia al inicio (como en cualquier feed de
-      // reels): sin esto, `playVideo()` simplemente retoma donde quedó al
-      // volver a hacer scroll hacia este video. Solo si ya se había
-      // reproducido: un seekTo() sobre un reproductor que nunca arrancó hace
-      // que YouTube empiece a reproducir solo (el "video siguiente" sonando).
-      if (this.reproduciendo()) {
-        this.ytPlayer?.seekTo(0, true);
-      }
-    } else {
-      const el = this.videoElRef?.nativeElement;
-      el?.pause();
-      if (el) {
-        el.currentTime = 0;
-      }
+    const el = this.videoElRef?.nativeElement;
+    el?.pause();
+    if (el) {
+      el.currentTime = 0;
     }
-    this.reproduciendo.set(false);
+    this.reproduciendoMp4.set(false);
   }
 }
