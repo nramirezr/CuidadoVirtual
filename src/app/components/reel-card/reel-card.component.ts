@@ -72,7 +72,15 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
     if (this.video.fuente === 'youtube') {
       this.initYoutubePlayer();
     } else {
-      this.videoElRef?.nativeElement.addEventListener('playing', () => this.onReproduccionIniciada());
+      const el = this.videoElRef?.nativeElement;
+      el?.addEventListener('playing', () => {
+        if (this.isVisible()) {
+          this.onReproduccionIniciada();
+        } else {
+          this.pause();
+        }
+      });
+      el?.addEventListener('loadedmetadata', () => this.desactivarSubtitulosNativos(el));
     }
 
     this.observer = new IntersectionObserver(
@@ -120,9 +128,18 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
   private programarBotonPlayDeRespaldo(): void {
     this.cancelarBotonPlayDeRespaldo();
     this.mostrarPlayTimeoutId = setTimeout(() => {
-      if (this.isVisible() && !this.reproduciendo()) {
-        this.mostrarBotonPlay.set(true);
+      if (!this.isVisible() || this.reproduciendo()) {
+        return;
       }
+      if (!this.audioState.muted()) {
+        // Probablemente el navegador bloqueó el autoplay con sonido: se
+        // reintenta en silencio (la persona puede reactivar el sonido).
+        this.audioState.muted.set(true);
+        this.play();
+        this.programarBotonPlayDeRespaldo();
+        return;
+      }
+      this.mostrarBotonPlay.set(true);
     }, ESPERA_ANTES_DE_MOSTRAR_PLAY_MS);
   }
 
@@ -139,12 +156,13 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
     this.ytPlayer = new YT.Player(this.youtubeContainerId, {
       videoId: this.video.youtubeId,
       playerVars: {
-        mute: 1,
+        mute: this.audioState.muted() ? 1 : 0,
         autoplay: 0,
         playsinline: 1,
         controls: 0,
         rel: 0,
         modestbranding: 1,
+        cc_load_policy: 0,
         loop: 1,
         playlist: this.video.youtubeId
       },
@@ -158,6 +176,7 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
           if (!this.audioState.muted()) {
             player.unMute();
           }
+          this.desactivarSubtitulosDeYoutube(player);
           // La carga del iframe de YouTube es async y puede terminar después de
           // que el IntersectionObserver ya haya intentado reproducir sin éxito
           // (el player aún no existía). Si la tarjeta ya está visible al quedar
@@ -167,12 +186,41 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
           }
         },
         onStateChange: (event) => {
+          if (event.data === YT.PlayerState.PLAYING && !this.isVisible()) {
+            // Carrera de scroll: YouTube a veces ignora un pauseVideo() pedido
+            // mientras aún estaba cargando y arranca igual. Si ya no está en
+            // pantalla, se vuelve a pausar para no tener dos videos sonando.
+            event.target.pauseVideo();
+            return;
+          }
           if (event.data === YT.PlayerState.PLAYING) {
             this.onReproduccionIniciada();
+            // El módulo de subtítulos de YouTube se carga recién al reproducir,
+            // así que hay que volver a apagarlo en este momento.
+            this.desactivarSubtitulosDeYoutube(event.target);
           }
         }
       }
     });
+  }
+
+  /**
+   * Los videos ya traen sus subtítulos incrustados en la imagen; si además
+   * se activan los de YouTube (por preferencia del espectador o subtítulos
+   * automáticos) se ven duplicados. `cc_load_policy: 0` no basta cuando el
+   * usuario tiene los subtítulos activados en su cuenta, y `unloadModule` no
+   * está en los tipos oficiales de la API.
+   */
+  private desactivarSubtitulosDeYoutube(player: YT.Player): void {
+    const p = player as unknown as { unloadModule?: (modulo: string) => void };
+    p.unloadModule?.('captions');
+    p.unloadModule?.('cc');
+  }
+
+  private desactivarSubtitulosNativos(el: HTMLVideoElement): void {
+    for (let i = 0; i < el.textTracks.length; i++) {
+      el.textTracks[i].mode = 'disabled';
+    }
   }
 
   private play(): void {
@@ -188,8 +236,12 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
       this.ytPlayer?.pauseVideo();
       // Al salir de pantalla se reinicia al inicio (como en cualquier feed de
       // reels): sin esto, `playVideo()` simplemente retoma donde quedó al
-      // volver a hacer scroll hacia este video.
-      this.ytPlayer?.seekTo(0, true);
+      // volver a hacer scroll hacia este video. Solo si ya se había
+      // reproducido: un seekTo() sobre un reproductor que nunca arrancó hace
+      // que YouTube empiece a reproducir solo (el "video siguiente" sonando).
+      if (this.reproduciendo()) {
+        this.ytPlayer?.seekTo(0, true);
+      }
     } else {
       const el = this.videoElRef?.nativeElement;
       el?.pause();
@@ -197,5 +249,6 @@ export class ReelCardComponent implements AfterViewInit, OnDestroy {
         el.currentTime = 0;
       }
     }
+    this.reproduciendo.set(false);
   }
 }

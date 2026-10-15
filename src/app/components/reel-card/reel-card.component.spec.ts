@@ -8,6 +8,7 @@ class FakeYTPlayer {
   playVideo = jasmine.createSpy('playVideo');
   pauseVideo = jasmine.createSpy('pauseVideo');
   seekTo = jasmine.createSpy('seekTo');
+  unloadModule = jasmine.createSpy('unloadModule');
   mute = jasmine.createSpy('mute');
   unMute = jasmine.createSpy('unMute');
   destroy = jasmine.createSpy('destroy');
@@ -123,9 +124,65 @@ describe('ReelCardComponent', () => {
 
     const player = FakeYTPlayer.instances[0];
     intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
     intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
 
     expect(player.seekTo).toHaveBeenCalledWith(0, true);
+  });
+
+  it('should not seek a player that never started (seekTo would make YouTube start playing it)', async () => {
+    createComponent(youtubeVideo);
+    await fixture.whenStable();
+
+    const player = FakeYTPlayer.instances[0];
+    intersectionCallback([{ isIntersecting: false, intersectionRatio: 0 } as IntersectionObserverEntry]);
+
+    expect(player.seekTo).not.toHaveBeenCalled();
+  });
+
+  it('should pause a youtube player that starts playing while its card is not visible (scroll race)', async () => {
+    createComponent(youtubeVideo);
+    await fixture.whenStable();
+
+    const player = FakeYTPlayer.instances[0];
+    player.pauseVideo.calls.reset();
+    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
+
+    expect(player.pauseVideo).toHaveBeenCalled();
+    expect(component.mostrarBotonPlay()).toBeFalse();
+  });
+
+  it('should retry muted when autoplay with sound never starts', fakeAsync(() => {
+    createComponent(youtubeVideo);
+    tick();
+    component.audioState.muted.set(false);
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+
+    const player = FakeYTPlayer.instances[0];
+    player.playVideo.calls.reset();
+    tick(1200);
+
+    expect(component.audioState.muted()).toBeTrue();
+    expect(player.playVideo).toHaveBeenCalled();
+    expect(component.mostrarBotonPlay()).toBeFalse();
+
+    tick(1200);
+    expect(component.mostrarBotonPlay()).toBeTrue();
+  }));
+
+  it('should disable YouTube captions so burned-in subtitles are not shown twice', async () => {
+    createComponent(youtubeVideo);
+    await fixture.whenStable();
+
+    const player = FakeYTPlayer.instances[0];
+    expect(player.options.playerVars.cc_load_policy).toBe(0);
+    expect(player.unloadModule).toHaveBeenCalledWith('captions');
+
+    intersectionCallback([{ isIntersecting: true, intersectionRatio: 0.9 } as IntersectionObserverEntry]);
+    player.unloadModule.calls.reset();
+    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
+    expect(player.unloadModule).toHaveBeenCalledWith('captions');
+    expect(player.unloadModule).toHaveBeenCalledWith('cc');
   });
 
   it('should play as soon as the youtube player is ready, even if the card became visible first (race condition)', async () => {
@@ -167,7 +224,7 @@ describe('ReelCardComponent', () => {
     fixture.detectChanges();
 
     const player = FakeYTPlayer.instances[0];
-    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING });
+    player.options.events.onStateChange({ data: (window as any).YT.PlayerState.PLAYING, target: player });
 
     tick(1200);
     fixture.detectChanges();

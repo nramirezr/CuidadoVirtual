@@ -17,6 +17,18 @@ describe('ReelsAudioStateService', () => {
     expect(service.muted()).toBeTrue();
   });
 
+  it('should start with sound when the user has already interacted with the page', () => {
+    Object.defineProperty(navigator, 'userActivation', {
+      value: { hasBeenActive: true },
+      configurable: true
+    });
+    try {
+      expect(new ReelsAudioStateService().muted()).toBeFalse();
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>)['userActivation'];
+    }
+  });
+
   it('should flip the muted state on toggle', () => {
     service.toggle();
     expect(service.muted()).toBeFalse();
