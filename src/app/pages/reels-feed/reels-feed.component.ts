@@ -35,14 +35,40 @@ export class ReelsFeedComponent implements OnDestroy {
   private readonly videosService = inject(VideosService);
   private readonly pool = inject(ReelsPlayerPoolService);
 
-  /** El contenedor aparece y desaparece con el estado (cargando / lista); los
-   * reproductores compartidos se crean al aparecer y se liberan al desaparecer. */
-  @ViewChild('capaReproductores')
-  set capaReproductores(ref: ElementRef<HTMLElement> | undefined) {
+  private resizeObserver?: ResizeObserver;
+  private viewportEl?: HTMLElement;
+
+  /**
+   * El área de video aparece y desaparece con el estado (cargando / lista). Los
+   * reproductores compartidos viven en una capa fija de la app (AppComponent);
+   * aquí solo se la ubica exactamente detrás de la lista y se la oculta al
+   * salir. Los iframes no se destruyen.
+   */
+  @ViewChild('viewport')
+  set viewport(ref: ElementRef<HTMLElement> | undefined) {
+    this.resizeObserver?.disconnect();
     if (ref) {
-      this.pool.registrarCapa(ref.nativeElement);
-    } else {
-      this.pool.liberar();
+      this.viewportEl = ref.nativeElement;
+      this.ubicarCapa();
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver(() => this.ubicarCapa());
+        this.resizeObserver.observe(this.viewportEl);
+      }
+    } else if (this.viewportEl) {
+      // Solo si antes hubo área de video: al llegar desde una categoría el feed
+      // arranca "cargando" (sin área) y no debe cortar el video ya iniciado.
+      this.viewportEl = undefined;
+      this.pool.ocultarCapa();
+    }
+  }
+
+  constructor() {
+    this.pool.asegurar();
+  }
+
+  private ubicarCapa(): void {
+    if (this.viewportEl) {
+      this.pool.mostrarCapa(this.viewportEl.getBoundingClientRect());
     }
   }
 
@@ -93,6 +119,8 @@ export class ReelsFeedComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.pool.liberar();
+    this.resizeObserver?.disconnect();
+    this.viewportEl = undefined;
+    this.pool.ocultarCapa();
   }
 }

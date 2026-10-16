@@ -5,6 +5,7 @@ import { CategoriesService } from '../../services/categories.service';
 import { VideosService } from '../../services/videos.service';
 import { CategoriaDoc } from '../../models/categoria-doc.model';
 import { VideoDoc } from '../../models/video-doc.model';
+import { ReelsPlayerPoolService } from '../../services/reels-player-pool.service';
 
 function categoria(id: string, nombre: string, icono: string, slug: string): CategoriaDoc {
   return { id, nombre, icono, slug, orden: 0, activa: true };
@@ -30,6 +31,7 @@ describe('CategorySelectorComponent', () => {
   let component: CategorySelectorComponent;
   let categoriesServiceSpy: jasmine.SpyObj<CategoriesService>;
   let videosServiceSpy: jasmine.SpyObj<VideosService>;
+  let poolSpy: jasmine.SpyObj<ReelsPlayerPoolService>;
 
   const categoriasFake = [
     categoria('1', 'Anticoagulante', '🩸', 'anticoagulante'),
@@ -40,15 +42,20 @@ describe('CategorySelectorComponent', () => {
   beforeEach(async () => {
     categoriesServiceSpy = jasmine.createSpyObj('CategoriesService', ['categoriasOneShot']);
     videosServiceSpy = jasmine.createSpyObj('VideosService', ['videosOneShot']);
+    poolSpy = jasmine.createSpyObj('ReelsPlayerPoolService', ['asegurar', 'iniciarDesdeGesto']);
     categoriesServiceSpy.categoriasOneShot.and.returnValue(Promise.resolve(categoriasFake));
     videosServiceSpy.videosOneShot.and.returnValue(Promise.resolve(videosFake));
 
     await TestBed.configureTestingModule({
       imports: [CategorySelectorComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([
+          { path: 'videos', children: [] },
+          { path: 'videos/:categoriaSlug', children: [] }
+        ]),
         { provide: CategoriesService, useValue: categoriesServiceSpy },
-        { provide: VideosService, useValue: videosServiceSpy }
+        { provide: VideosService, useValue: videosServiceSpy },
+        { provide: ReelsPlayerPoolService, useValue: poolSpy }
       ]
     }).compileComponents();
   });
@@ -88,6 +95,37 @@ describe('CategorySelectorComponent', () => {
     const todos = fixture.nativeElement.querySelector('.todos-item') as HTMLAnchorElement;
     expect(todos).toBeTruthy();
     expect(todos.getAttribute('href')).toBe('/videos');
+  }));
+
+  it('should create the shared players right away so they exist before the category tap', fakeAsync(() => {
+    crear();
+    expect(poolSpy.asegurar).toHaveBeenCalled();
+  }));
+
+  it('should start the category first video with sound inside the tap', fakeAsync(() => {
+    videosServiceSpy.videosOneShot.and.returnValue(
+      Promise.resolve([{ ...video('v1', 'Anticoagulante'), categoriaId: '1' }])
+    );
+    crear();
+    (fixture.nativeElement.querySelector('.category-item:not(.todos-item)') as HTMLAnchorElement).click();
+    expect(poolSpy.iniciarDesdeGesto).toHaveBeenCalledWith('abc');
+  }));
+
+  it('should start the first video of the whole list for Ver todos', fakeAsync(() => {
+    crear();
+    (fixture.nativeElement.querySelector('.todos-item') as HTMLAnchorElement).click();
+    expect(poolSpy.iniciarDesdeGesto).toHaveBeenCalledWith('abc');
+  }));
+
+  it('should only unlock (no video id) when the first video is not from YouTube', fakeAsync(() => {
+    videosServiceSpy.videosOneShot.and.returnValue(
+      Promise.resolve([
+        { ...video('m1', 'Anticoagulante'), categoriaId: '1', fuente: 'mp4' as const, youtubeId: undefined, mp4Url: '/a.mp4' }
+      ])
+    );
+    crear();
+    (fixture.nativeElement.querySelector('.category-item:not(.todos-item)') as HTMLAnchorElement).click();
+    expect(poolSpy.iniciarDesdeGesto).toHaveBeenCalledWith(undefined);
   }));
 
   it('should show an error message if loading fails', fakeAsync(() => {

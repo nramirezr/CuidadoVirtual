@@ -13,6 +13,9 @@ const ESPERA_FIN_DE_MOVIMIENTO_MS = 150;
  * de llegar a pantalla (que se procesa en el mismo cuadro) vaya primero: si no,
  * la precarga del siguiente pisa el video que justo iba a reproducirse. */
 const ESPERA_PRECARGA_MS = 120;
+/** Si el video arrancó por el toque en la categoría y el feed nunca llega a
+ * pedirlo (error, la persona volvió atrás), se detiene para que no quede sonando. */
+const ESPERA_HUERFANO_MS = 12000;
 const CANTIDAD_RANURAS = 2;
 
 interface Ranura {
@@ -74,6 +77,8 @@ export class ReelsPlayerPoolService {
   private reintentoApiId?: ReturnType<typeof setTimeout>;
   private movimientoId?: ReturnType<typeof setTimeout>;
   private precargaId?: ReturnType<typeof setTimeout>;
+  private huerfanoId?: ReturnType<typeof setTimeout>;
+  private creacionPedida = false;
 
   constructor() {
     effect(() => {
@@ -86,11 +91,101 @@ export class ReelsPlayerPoolService {
     });
   }
 
-  /** El feed entrega el contenedor donde viven los dos iframes. */
+  /** La app entrega el contenedor (persistente, fuera de las páginas) donde viven los dos iframes. */
   registrarCapa(capa: HTMLElement): void {
     this.capa = capa;
-    if (this.pendienteActivar || this.pendientePrecargar) {
+    if (this.creacionPedida || this.pendienteActivar || this.pendientePrecargar) {
       this.asegurarRanuras();
+    }
+  }
+
+  /**
+   * Crea los dos reproductores si todavía no existen. Se pide en la bienvenida
+   * y en las categorías para que YA existan cuando la persona toque una
+   * categoría: Safari solo desbloquea el sonido en iframes existentes en el
+   * momento del toque.
+   */
+  asegurar(): void {
+    this.creacionPedida = true;
+    this.asegurarRanuras();
+  }
+
+  /**
+   * Debe llamarse DENTRO del toque en una categoría (gesto real de la persona).
+   * Desbloquea el sonido en los dos reproductores y, si se conoce el primer
+   * video, lo arranca ya con sonido; seguirá sonando cuando el feed termine de
+   * cargar y lo reclame con `activar()`. Verificado en Safari de iPhone: un
+   * reproductor recién creado y en blanco acepta el sonido si se le pide dentro
+   * del toque, y los videos siguientes suenan sin más gestos.
+   */
+  iniciarDesdeGesto(videoId?: string): void {
+    this.audio.muted.set(false);
+    for (const r of this.ranuras) {
+      if (r.listo && r.player) {
+        r.player.unMute();
+      }
+    }
+    const ranura = this.ranuras.find((r) => r.listo && r.player);
+    if (!videoId || !ranura) {
+      return;
+    }
+    this.cancelarEvaluacion();
+    this.pendienteActivar = undefined;
+    this.ranuraActiva = ranura;
+    ranura.videoId = videoId;
+    ranura.reproducido = false;
+    for (const r of this.ranuras) {
+      r.host.style.visibility = r === ranura ? 'visible' : 'hidden';
+    }
+    this.activa.set({ key: null, reproduciendo: false, mostrarBotonPlay: false });
+    ranura.player?.loadVideoById(videoId);
+    this.programarEvaluacion();
+    clearTimeout(this.huerfanoId);
+    this.huerfanoId = setTimeout(() => {
+      if (this.activa().key === null) {
+        this.ocultarCapa();
+      }
+    }, ESPERA_HUERFANO_MS);
+  }
+
+  /** El feed muestra la capa justo detrás de su lista, con la geometría de su área de video. */
+  mostrarCapa(rect: { top: number; left: number; width: number; height: number }): void {
+    const capa = this.capa;
+    if (!capa) {
+      return;
+    }
+    capa.style.top = `${rect.top}px`;
+    capa.style.left = `${rect.left}px`;
+    capa.style.width = `${rect.width}px`;
+    capa.style.height = `${rect.height}px`;
+    capa.style.opacity = '1';
+  }
+
+  /**
+   * Al salir del feed: se pausa y se oculta la capa, pero los iframes NO se
+   * destruyen (siguen desbloqueados para la próxima categoría y no se vuelve a
+   * pagar su creación). Se usa opacity y no display:none porque Safari no
+   * reproduce iframes que no se renderizan.
+   */
+  ocultarCapa(): void {
+    this.cancelarEvaluacion();
+    clearTimeout(this.toqueId);
+    clearTimeout(this.precargaId);
+    clearTimeout(this.huerfanoId);
+    clearTimeout(this.movimientoId);
+    if (this.ranuraActiva) {
+      this.detener(this.ranuraActiva);
+    }
+    for (const r of this.ranuras) {
+      r.host.style.visibility = 'hidden';
+    }
+    this.ranuraActiva = undefined;
+    this.pendienteActivar = undefined;
+    this.pendientePrecargar = undefined;
+    this.enMovimiento.set(false);
+    this.activa.set({ key: null, reproduciendo: false, mostrarBotonPlay: false });
+    if (this.capa) {
+      this.capa.style.opacity = '0';
     }
   }
 
@@ -108,6 +203,7 @@ export class ReelsPlayerPoolService {
       return;
     }
     this.cancelarEvaluacion();
+    clearTimeout(this.huerfanoId);
     this.activa.set({ key, reproduciendo: false, mostrarBotonPlay: false });
     this.pendienteActivar = { key, videoId };
     this.asegurarRanuras();
@@ -165,8 +261,9 @@ export class ReelsPlayerPoolService {
     this.movimientoId = setTimeout(() => this.enMovimiento.set(false), ESPERA_FIN_DE_MOVIMIENTO_MS);
   }
 
-  /** Al salir del feed: se destruyen los iframes y se libera la memoria. */
+  /** Destruye los iframes y libera la memoria (ya no se usa al salir del feed; ver ocultarCapa). */
   liberar(): void {
+    clearTimeout(this.huerfanoId);
     this.cancelarEvaluacion();
     clearTimeout(this.toqueId);
     clearTimeout(this.reintentoApiId);
@@ -188,6 +285,7 @@ export class ReelsPlayerPoolService {
     this.ranuraActiva = undefined;
     this.capa = undefined;
     this.creando = false;
+    this.creacionPedida = false;
     this.pendienteActivar = undefined;
     this.pendientePrecargar = undefined;
     this.enMovimiento.set(false);
@@ -300,6 +398,12 @@ export class ReelsPlayerPoolService {
     this.ranuraActiva = elegida;
 
     const player = elegida.player as YT.Player;
+    if (elegida.videoId === pendiente.videoId && elegida.estado === YT.PlayerState.PLAYING) {
+      // Ya venía reproduciéndose (arrancó con el toque en la categoría): solo se
+      // marca la tarjeta, sin reiniciar nada ni mostrar la miniatura.
+      this.activa.set({ key: pendiente.key, reproduciendo: true, mostrarBotonPlay: false });
+      return;
+    }
     if (elegida.videoId === pendiente.videoId) {
       player.playVideo();
     } else {

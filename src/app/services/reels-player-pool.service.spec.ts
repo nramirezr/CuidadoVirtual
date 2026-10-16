@@ -304,6 +304,157 @@ describe('ReelsPlayerPoolService', () => {
     pool.liberar();
   }));
 
+  describe('sound unlock by the category tap (iniciarDesdeGesto)', () => {
+    it('should create the two players as soon as asegurar() is called, before any feed asks for a video', fakeAsync(() => {
+      pool.liberar();
+      pool.registrarCapa(capa);
+      pool.asegurar();
+      iniciar();
+
+      expect(FakePlayer.instances.length).toBe(2);
+      expect(FakePlayer.instances.every((p) => p.loadVideoById.calls.count() === 0)).toBeTrue();
+      pool.liberar();
+    }));
+
+    it('should create them when asegurar() was requested before the layer was registered', fakeAsync(() => {
+      pool.liberar();
+      pool.asegurar();
+      iniciar();
+      expect(FakePlayer.instances.length).toBe(0);
+
+      pool.registrarCapa(capa);
+      iniciar();
+      expect(FakePlayer.instances.length).toBe(2);
+      pool.liberar();
+    }));
+
+    it('should unmute both players, turn sound on and start the first video inside the tap', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+      FakePlayer.instances.forEach((p) => p.unMute.calls.reset());
+      expect(audio.muted()).toBeTrue();
+
+      pool.iniciarDesdeGesto('vidA');
+
+      expect(audio.muted()).toBeFalse();
+      expect(FakePlayer.instances.every((p) => p.unMute.calls.count() === 1)).toBeTrue();
+      const arrancado = FakePlayer.instances.filter((p) => p.loadVideoById.calls.count() > 0);
+      expect(arrancado.length).toBe(1);
+      expect(arrancado[0].loadVideoById).toHaveBeenCalledWith('vidA');
+      pool.liberar();
+    }));
+
+    it('should only unlock (no video) when the first video is unknown or is not from YouTube', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+
+      pool.iniciarDesdeGesto();
+
+      expect(audio.muted()).toBeFalse();
+      expect(FakePlayer.instances.every((p) => p.loadVideoById.calls.count() === 0)).toBeTrue();
+      pool.liberar();
+    }));
+
+    it('should keep the already-playing first video when the feed claims it, without restarting or flipping the audio', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+      pool.iniciarDesdeGesto('vidA');
+      const p = FakePlayer.instances.find((x) => x.loadVideoById.calls.count() > 0)!;
+      p.emitir(ESTADO.PLAYING);
+      expect(pool.activa().reproduciendo).toBeTrue();
+      p.loadVideoById.calls.reset();
+      p.playVideo.calls.reset();
+
+      pool.activar('card-1', 'vidA');
+      tick(1500 * 3);
+
+      expect(pool.activa()).toEqual({ key: 'card-1', reproduciendo: true, mostrarBotonPlay: false });
+      expect(p.loadVideoById).not.toHaveBeenCalled();
+      expect(p.playVideo).not.toHaveBeenCalled();
+      expect(audio.muted()).toBeFalse();
+      pool.liberar();
+    }));
+
+    it('should not pause the video that started with the tap while the feed is still loading', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+      pool.iniciarDesdeGesto('vidA');
+      const p = FakePlayer.instances.find((x) => x.loadVideoById.calls.count() > 0)!;
+
+      p.emitir(ESTADO.PLAYING);
+      expect(p.pauseVideo).not.toHaveBeenCalled();
+      pool.liberar();
+    }));
+
+    it('should stop a tap-started video that the feed never claims (error, user went back)', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+      pool.iniciarDesdeGesto('vidA');
+      const p = FakePlayer.instances.find((x) => x.loadVideoById.calls.count() > 0)!;
+      p.emitir(ESTADO.PLAYING);
+
+      tick(12000);
+
+      expect(p.pauseVideo).toHaveBeenCalled();
+      expect(pool.activa().key).toBeNull();
+      expect(pool.activa().reproduciendo).toBeFalse();
+      pool.liberar();
+    }));
+
+    it('should keep the tap-started video when the feed claims it in time (no orphan stop)', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+      pool.iniciarDesdeGesto('vidA');
+      const p = FakePlayer.instances.find((x) => x.loadVideoById.calls.count() > 0)!;
+      p.emitir(ESTADO.PLAYING);
+
+      tick(3000);
+      pool.activar('card-1', 'vidA');
+      tick(15000);
+
+      expect(p.pauseVideo).not.toHaveBeenCalled();
+      expect(pool.activa().key).toBe('card-1');
+      pool.liberar();
+    }));
+  });
+
+  describe('feed layer', () => {
+    it('should place the layer behind the list and hide it without destroying the players', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+
+      pool.mostrarCapa({ top: 48, left: 0, width: 400, height: 700 });
+      expect(capa.style.top).toBe('48px');
+      expect(capa.style.height).toBe('700px');
+      expect(capa.style.opacity).toBe('1');
+
+      pool.activar('a', 'vidA');
+      const p = FakePlayer.instances.find((x) => x.loadVideoById.calls.count() > 0)!;
+      p.emitir(ESTADO.PLAYING);
+
+      pool.ocultarCapa();
+      expect(capa.style.opacity).toBe('0');
+      expect(p.pauseVideo).toHaveBeenCalled();
+      expect(FakePlayer.instances.every((x) => x.destroy.calls.count() === 0)).toBeTrue();
+      expect(pool.activa().key).toBeNull();
+      pool.liberar();
+    }));
+
+    it('should keep the sound unlocked for the next category after leaving the feed (same two players)', fakeAsync(() => {
+      pool.asegurar();
+      iniciar();
+      pool.iniciarDesdeGesto('vidA');
+      pool.ocultarCapa();
+
+      pool.iniciarDesdeGesto('vidB');
+
+      const cargados = FakePlayer.instances.flatMap((x) => x.loadVideoById.calls.allArgs().map((a) => a[0]));
+      expect(cargados).toEqual(['vidA', 'vidB']);
+      expect(FakePlayer.instances.length).toBe(2);
+      pool.liberar();
+    }));
+  });
+
   it('should mark movement while scrolling and clear it shortly after', fakeAsync(() => {
     pool.marcarMovimiento();
     expect(pool.enMovimiento()).toBeTrue();

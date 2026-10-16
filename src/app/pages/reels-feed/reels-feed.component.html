@@ -17,9 +17,7 @@
       <p>Cargando…</p>
     </div>
   } @else if (modoTodos() || categoriaActual()) {
-    <div class="viewport">
-      <!-- Los dos reproductores de YouTube compartidos viven aquí, detrás de la lista. -->
-      <div #capaReproductores class="player-layer"></div>
+    <div #viewport class="viewport">
       <div
         class="reels-scroll-container"
         (scroll)="onScroll()"

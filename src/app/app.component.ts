@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { AgeConfirmationDialogComponent } from './dialogs/age-confirmation-dialog/age-confirmation-dialog.component';
 import { VisitCounterService } from './services/visit-counter.service';
+import { ReelsPlayerPoolService } from './services/reels-player-pool.service';
 
 
 
@@ -13,10 +14,20 @@ import { VisitCounterService } from './services/visit-counter.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, AfterViewInit {
   title = 'asistmedic';
 
-  constructor(public dialog: MatDialog, private visitCounterService: VisitCounterService) { }
+  @ViewChild('capaReproductores', { static: true }) capaReproductores!: ElementRef<HTMLElement>;
+
+  constructor(
+    public dialog: MatDialog,
+    private visitCounterService: VisitCounterService,
+    private pool: ReelsPlayerPoolService
+  ) { }
+
+  ngAfterViewInit(): void {
+    this.pool.registrarCapa(this.capaReproductores.nativeElement);
+  }
 
   ngOnInit() {
     // Incrementar la visita al cargar la aplicación

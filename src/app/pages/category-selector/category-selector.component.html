@@ -10,14 +10,19 @@
     <p class="status-msg">No pudimos cargar las categorías. Intenta de nuevo más tarde.</p>
   } @else {
     <mat-nav-list class="category-list">
-      <a mat-list-item routerLink="/videos" class="category-item todos-item">
+      <a mat-list-item routerLink="/videos" class="category-item todos-item" (click)="iniciarSonido(null)">
         <span class="item-row">
           <span class="category-icon">🎬</span>
           <span class="category-title">Ver todos</span>
         </span>
       </a>
       @for (c of categorias(); track c.id) {
-        <a mat-list-item [routerLink]="['/videos', slugFor(c)]" class="category-item">
+        <a
+          mat-list-item
+          [routerLink]="['/videos', slugFor(c)]"
+          class="category-item"
+          (click)="iniciarSonido(c)"
+        >
           <span class="item-row">
             <span class="category-icon">{{ c.icono }}</span>
             <span class="category-title">{{ c.nombre }}</span>

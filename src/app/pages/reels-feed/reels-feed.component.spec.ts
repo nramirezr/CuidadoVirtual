@@ -8,6 +8,7 @@ import { VideosService } from '../../services/videos.service';
 import { CategoriaDoc } from '../../models/categoria-doc.model';
 import { VideoDoc } from '../../models/video-doc.model';
 import { videoMod } from '../../models/videoMod.model';
+import { ReelsPlayerPoolService } from '../../services/reels-player-pool.service';
 
 @Component({
   selector: 'app-reel-card',
@@ -47,6 +48,7 @@ describe('ReelsFeedComponent', () => {
   let component: ReelsFeedComponent;
   let categoriesServiceSpy: jasmine.SpyObj<CategoriesService>;
   let videosServiceSpy: jasmine.SpyObj<VideosService>;
+  let poolSpy: jasmine.SpyObj<ReelsPlayerPoolService>;
 
   beforeEach(async () => {
     categoriesServiceSpy = jasmine.createSpyObj('CategoriesService', ['findBySlug']);
@@ -58,12 +60,21 @@ describe('ReelsFeedComponent', () => {
       Promise.resolve([video('v1', 'Anticoagulante'), video('v2', 'Otra')])
     );
 
+    poolSpy = jasmine.createSpyObj('ReelsPlayerPoolService', [
+      'asegurar',
+      'mostrarCapa',
+      'ocultarCapa',
+      'marcarMovimiento',
+      'desbloquearAudio'
+    ]);
+
     await TestBed.configureTestingModule({
       imports: [ReelsFeedComponent],
       providers: [
         provideRouter([]),
         { provide: CategoriesService, useValue: categoriesServiceSpy },
-        { provide: VideosService, useValue: videosServiceSpy }
+        { provide: VideosService, useValue: videosServiceSpy },
+        { provide: ReelsPlayerPoolService, useValue: poolSpy }
       ]
     })
       .overrideComponent(ReelsFeedComponent, {
@@ -125,6 +136,33 @@ describe('ReelsFeedComponent', () => {
     expect(component.categoriaActual()).toBeNull();
     expect(component.categoriaNoEncontrada()).toBeTrue();
     expect(fixture.nativeElement.querySelector('.empty-state')).toBeTruthy();
+  });
+
+  it('should place the shared players layer behind the list once the video area exists', async () => {
+    await settle();
+    expect(poolSpy.asegurar).toHaveBeenCalled();
+    expect(poolSpy.mostrarCapa).toHaveBeenCalled();
+  });
+
+  it('should NOT hide the layer while it is still loading (a video started by the category tap must keep playing)', () => {
+    fixture.detectChanges();
+    expect(component.cargando()).toBeTrue();
+    expect(poolSpy.ocultarCapa).not.toHaveBeenCalled();
+  });
+
+  it('should hide the layer (without destroying the players) when leaving the feed', async () => {
+    await settle();
+    fixture.destroy();
+    expect(poolSpy.ocultarCapa).toHaveBeenCalled();
+  });
+
+  it('should tell the pool about scrolling and re-assert the sound unlock on every gesture', async () => {
+    await settle();
+    const lista = fixture.nativeElement.querySelector('.reels-scroll-container') as HTMLElement;
+    lista.dispatchEvent(new Event('scroll'));
+    lista.dispatchEvent(new Event('touchend'));
+    expect(poolSpy.marcarMovimiento).toHaveBeenCalled();
+    expect(poolSpy.desbloquearAudio).toHaveBeenCalled();
   });
 
   it('should have a back button linking to /categorias', async () => {
