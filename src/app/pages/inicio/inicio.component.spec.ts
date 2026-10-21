@@ -28,11 +28,10 @@ describe('InicioComponent', () => {
     expect(el.querySelectorAll('img').length).toBe(2);
   });
 
-  it('should keep sending the 2025 version to the old site, in a new tab', () => {
+  it('should send the 2025 version to the old site in the same tab (like the 2026 one)', () => {
     const link = el.querySelector('#btn-2025') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('https://cuidado-virtual.vercel.app/');
-    expect(link.getAttribute('target')).toBe('_blank');
-    expect(link.getAttribute('rel')).toContain('noopener');
+    expect(link.getAttribute('target')).toBeNull();
   });
 
   it('should send the 2026 version to this site (its welcome page), inside the same app', () => {
