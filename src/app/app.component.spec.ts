@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { routes } from './app.routes';
 import { VisitCounterService } from './services/visit-counter.service';
@@ -40,6 +40,33 @@ describe('AppComponent', () => {
 
   it(`should have the 'asistmedic' title`, () => {
     expect(component.title).toEqual('asistmedic');
+  });
+
+  describe('age confirmation dialog', () => {
+    let router: Router;
+
+    beforeEach(() => {
+      router = TestBed.inject(Router);
+      spyOn(component.dialog, 'open');
+    });
+
+    it('should NOT be asked on the version picker (root)', async () => {
+      await router.navigateByUrl('/');
+      expect(component.dialog.open).not.toHaveBeenCalled();
+    });
+
+    it('should be asked once when entering this version from the picker', async () => {
+      await router.navigateByUrl('/');
+      await router.navigateByUrl('/bienvenida');
+      await router.navigateByUrl('/');
+      await router.navigateByUrl('/bienvenida');
+      expect(component.dialog.open).toHaveBeenCalledTimes(1);
+    });
+
+    it('should be asked when the person lands directly on an inner page (shared link / QR)', async () => {
+      await router.navigateByUrl('/bienvenida');
+      expect(component.dialog.open).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('should call incrementVisit on initialization', () => {
