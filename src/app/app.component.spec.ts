@@ -63,6 +63,13 @@ describe('AppComponent', () => {
       expect(component.dialog.open).toHaveBeenCalledTimes(1);
     });
 
+    it('should scroll to the top before opening the dialog (it freezes the scroll where it is)', async () => {
+      const scroll = spyOn(window, 'scrollTo');
+      scroll.and.callFake(() => expect(component.dialog.open).not.toHaveBeenCalled());
+      await router.navigateByUrl('/bienvenida');
+      expect(scroll).toHaveBeenCalledWith(0, 0);
+    });
+
     it('should be asked when the person lands directly on an inner page (shared link / QR)', async () => {
       await router.navigateByUrl('/bienvenida');
       expect(component.dialog.open).toHaveBeenCalledTimes(1);
