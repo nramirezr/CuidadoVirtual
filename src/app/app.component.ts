@@ -44,7 +44,12 @@ export class AppComponent implements OnInit, AfterViewInit {
         filter((e) => e.urlAfterRedirects.split(/[?#]/)[0] !== '/'),
         take(1)
       )
-      .subscribe(() => this.openAgeConfirmationDialog());
+      .subscribe(() => {
+        // El cuadro bloquea el scroll en la posición actual; si se abre antes de que
+        // el router suba la página (Safari), la bienvenida quedaba a medio scroll.
+        window.scrollTo(0, 0);
+        this.openAgeConfirmationDialog();
+      });
   }
   openAgeConfirmationDialog(): void {
     const dialogRef = this.dialog.open(AgeConfirmationDialogComponent, {
