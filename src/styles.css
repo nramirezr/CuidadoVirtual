@@ -28,3 +28,46 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   min-height: 48px;
   flex: 0 0 auto;
 }
+
+/* Botón "Volver" de la barra superior: grande y con texto, pensado para
+   personas mayores (antes era solo una flecha pequeña). */
+.cv-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 52px;
+  padding: 0 20px 0 14px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: #fff;
+  color: var(--cv-color-primary, #0d47a1);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cv-back-button .cv-back-arrow {
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.cv-back-button:active {
+  background: #dbe7fb;
+}
+
+.cv-back-button:focus-visible {
+  outline: 3px solid #ffd54f;
+  outline-offset: 2px;
+}
+
+/* Sin zoom con los dedos (la app está pensada para pantalla completa en celular).
+   En iPhone el atributo user-scalable del viewport se ignora, así que también se
+   restringen los gestos táctiles y se bloquea el pellizco desde JavaScript. */
+html,
+body {
+  touch-action: pan-x pan-y;
+}

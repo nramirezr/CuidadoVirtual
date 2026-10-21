@@ -1,6 +1,9 @@
 <div class="app-shell">
   <header class="top-bar">
-    <a routerLink="/categorias" class="back-link cv-tap-target" aria-label="Volver a categorías">←</a>
+    <a routerLink="/categorias" class="back-link cv-back-button" aria-label="Volver a categorías">
+      <span class="cv-back-arrow" aria-hidden="true">←</span>
+      Volver
+    </a>
     @if (modoTodos()) {
       <span class="breadcrumb">🎬 Todos los videos</span>
     } @else {

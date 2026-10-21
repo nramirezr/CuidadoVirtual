@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>Asistente Virtual</title>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="preconnect" href="https://www.youtube.com">
   <link rel="preconnect" href="https://i.ytimg.com">
@@ -14,6 +14,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script>
+    // iOS ignora user-scalable=no: se bloquea el pellizco (zoom). El doble toque lo
+    // cubre touch-action en styles.css.
+    ["gesturestart", "gesturechange", "gestureend"].forEach(function (t) {
+      document.addEventListener(t, function (e) { e.preventDefault(); });
+    });
+    document.addEventListener("touchmove", function (e) {
+      if (e.touches && e.touches.length > 1) { e.preventDefault(); }
+    }, { passive: false });
+  </script>
 </head>
 
 <body class="mat-typography">
