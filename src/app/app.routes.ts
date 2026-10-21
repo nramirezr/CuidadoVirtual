@@ -1,8 +1,11 @@
 import { Routes } from '@angular/router';
 import { BienvenidaComponent } from './pages/bienvenida/bienvenida.component';
+import { InicioComponent } from './pages/inicio/inicio.component';
 
 export const routes: Routes = [
-  { path: '', component: BienvenidaComponent, title: 'Cuidado Virtual - Bienvenida' },
+  // Portada: elegir entre la versión 2025 (sitio anterior) y la 2026 (esta app).
+  { path: '', component: InicioComponent, title: 'Asistente Virtual para Cuidadores' },
+  { path: 'bienvenida', component: BienvenidaComponent, title: 'Cuidado Virtual - Bienvenida' },
   {
     path: 'categorias',
     loadComponent: () =>
@@ -25,8 +28,7 @@ export const routes: Routes = [
     title: 'Cuidado Virtual - Videos'
   },
   // Rutas antiguas: se redirigen por si algún QR/material impreso ya las referencia.
-  { path: 'bienvenida', redirectTo: '' },
-  { path: 'inicio', redirectTo: '' },
+  { path: 'inicio', redirectTo: 'bienvenida' },
   {
     path: 'admin',
     loadChildren: () => import('./pages/admin/admin.routes').then((m) => m.ADMIN_ROUTES)
