@@ -30,6 +30,20 @@ describe('BienvenidaComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should not show the hospital or university logos', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.logo-container')).toBeNull();
+    expect(compiled.querySelector('img.asistente-logo')).toBeNull();
+    const origenes = Array.from(compiled.querySelectorAll('img')).map((i) => i.getAttribute('src') ?? '');
+    expect(origenes.some((src) => /logo/i.test(src))).toBeFalse();
+  });
+
+  it('should keep the title and the button to the categories', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.asistente-title')).not.toBeNull();
+    expect(compiled.querySelector('.go-to-videos')?.textContent).toContain('Ver videos de cuidado');
+  });
+
   it('should display the welcome title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.asistente-title')?.textContent)

@@ -13,8 +13,6 @@ import { ReelsPlayerPoolService } from '../../services/reels-player-pool.service
   styleUrl: './bienvenida.component.css'
 })
 export class BienvenidaComponent implements OnInit {
-  logoSrc = 'assets/logo.jpg';
-  logoUssSrc = 'assets/logo-uss-vm.jpg';
   visitCount = 0;
 
   constructor(
